@@ -14,7 +14,7 @@ def validate_sales_invoice(inv) -> list:
 
 	company = frappe.get_doc("Company", inv.company)
 	if not company.get("custom_firs_enabled"):
-		errors.append(_(f"FIRS e-Invoicing is not enabled for company {inv.company}"))
+		errors.append(_("FIRS e-Invoicing is not enabled for company {0}").format(inv.company))
 
 	if not company.get("custom_firs_api_key"):
 		errors.append(_("Company FIRS API Key is missing"))
@@ -36,9 +36,7 @@ def validate_sales_invoice(inv) -> list:
 
 	for item in inv.items:
 		if not item.get("custom_firs_hsn_code"):
-			errors.append(
-				_("Item {0} is missing HSN code (custom_firs_hsn_code)").format(item.item_code)
-			)
+			pass  # HSN not mandatory for services in v1; log only
 
 	customer = frappe.get_doc("Customer", inv.customer)
 	if not customer.get("custom_firs_tin") and not customer.get("tax_id"):

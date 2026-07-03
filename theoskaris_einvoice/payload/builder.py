@@ -38,7 +38,15 @@ def build_payload(sales_invoice: str | Any) -> dict:
 
 	posting_dt = get_datetime(inv.posting_date)
 	issue_date = posting_dt.strftime("%Y-%m-%d")
-	issue_time = (inv.posting_time or posting_dt.strftime("%H:%M:%S")).split(".")[0]
+	posting_time = inv.posting_time
+	if isinstance(posting_time, (str,)):
+		issue_time = posting_time.split(".")[0]
+	elif hasattr(posting_time, "total_seconds"):
+		# ERPNext stores posting_time as timedelta in some versions
+		seconds = int(posting_time.total_seconds())
+		issue_time = f"{seconds // 3600:02d}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"
+	else:
+		issue_time = posting_dt.strftime("%H:%M:%S")
 	due_date = inv.due_date and str(inv.due_date) or issue_date
 
 	payload = {
@@ -84,6 +92,10 @@ def _get_invoice_kind(customer) -> str:
 	"""Return B2B if customer has TIN, otherwise B2C."""
 	tin = _get_tin(customer)
 	if tin and tin != PLACEHOLDER_TIN:
+		return "B2B"
+	# If customer has a tax_id set on the Customer record, treat as B2B
+	customer_tax_id = (customer.get("tax_id") or "").strip()
+	if customer_tax_id:
 		return "B2B"
 	return "B2C"
 
