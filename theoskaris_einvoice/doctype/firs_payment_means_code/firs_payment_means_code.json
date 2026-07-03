@@ -1,0 +1,74 @@
+{
+	"actions": [],
+	"allow_rename": 1,
+	"autoname": "field:code",
+	"creation": "2026-07-03 10:00:00.000000",
+	"doctype": "DocType",
+	"editable_grid": 1,
+	"engine": "InnoDB",
+	"field_order": [
+		"code",
+		"description",
+		"payment_terms_template"
+	],
+	"fields": [
+		{
+			"fieldname": "code",
+			"fieldtype": "Data",
+			"in_list_view": 1,
+			"label": "FIRS Payment Means Code",
+			"reqd": 1,
+			"unique": 1
+		},
+		{
+			"fieldname": "description",
+			"fieldtype": "Data",
+			"in_list_view": 1,
+			"label": "Description"
+		},
+		{
+			"fieldname": "payment_terms_template",
+			"fieldtype": "Link",
+			"label": "Payment Terms Template",
+			"options": "Payment Terms Template"
+		}
+	],
+	"index_web_pages_for_search": 1,
+	"istable": 0,
+	"links": [],
+	"modified": "2026-07-03 10:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "Theoskaris Einvoice",
+	"name": "FIRS Payment Means Code",
+	"custom": 1,
+	"naming_rule": "By fieldname",
+	"owner": "Administrator",
+	"permissions": [
+		{
+			"create": 1,
+			"delete": 1,
+			"email": 1,
+			"export": 1,
+			"print": 1,
+			"read": 1,
+			"report": 1,
+			"role": "System Manager",
+			"share": 1,
+			"write": 1
+		},
+		{
+			"read": 1,
+			"role": "Accounts User"
+		},
+		{
+			"read": 1,
+			"role": "Accounts Manager"
+		}
+	],
+	"quick_entry": 1,
+	"search_fields": "description",
+	"sort_field": "modified",
+	"sort_order": "DESC",
+	"states": [],
+	"track_changes": 1
+}
