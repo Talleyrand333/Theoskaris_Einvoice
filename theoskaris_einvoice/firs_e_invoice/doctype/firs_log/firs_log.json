@@ -88,7 +88,7 @@
     "modified_by": "Administrator",
     "module": "FIRS E-Invoice",
     "name": "FIRS Log",
-    "custom": 1,
+    "custom": 0,
     "owner": "Administrator",
     "permissions": [
         {

@@ -40,7 +40,7 @@
     "modified_by": "Administrator",
     "module": "FIRS E-Invoice",
     "name": "FIRS Tax Category",
-    "custom": 1,
+    "custom": 0,
     "naming_rule": "By fieldname",
     "owner": "Administrator",
     "permissions": [
