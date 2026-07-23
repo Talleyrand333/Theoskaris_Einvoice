@@ -113,7 +113,7 @@ class EtranzactClient(BaseFIRSClient):
 		timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 		return {
 			"x-api-key": self.company.get_password("custom_firs_api_key") or "",
-			"x-api-signature": self.company.get_password("custom_firs_api_signature") or "",
+			"x-api-secret": self.company.get_password("custom_firs_api_signature") or "",
 			"x-api-timestamp": timestamp,
 		}
 
