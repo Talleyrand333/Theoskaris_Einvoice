@@ -48,27 +48,10 @@ class FIRSQueue(Document):
 
 	@staticmethod
 	def get_next_pending():
-		"""Return the next pending or retryable failed queue item, ordered by creation."""
-		now = frappe.utils.now()
+		"""Return the oldest pending queue item."""
 		return frappe.db.get_all(
 			"FIRS Queue",
-			filters=[
-				["status", "in", ["Pending", "Failed"]],
-				["retry_count", "<", ["max_retries"]],
-				[
-					"next_retry_at",
-					"is",
-					"not set",
-				],
-			],
-			or_filters=[
-				["status", "=", "Pending"],
-				[
-					"status",
-					"=",
-					"Failed",
-				],
-			],
+			filters={"status": "Pending"},
 			fields=["name"],
 			order_by="created_at asc",
 			limit=1,

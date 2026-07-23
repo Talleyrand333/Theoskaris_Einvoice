@@ -6,7 +6,7 @@ import time
 import frappe
 
 from theoskaris_einvoice.api.client_base import FIRSAPIError, get_firs_client
-from theoskaris_einvoice.doctype.firs_log.firs_log import log_request
+from theoskaris_einvoice.firs_e_invoice.doctype.firs_log.firs_log import log_request
 from theoskaris_einvoice.payload.builder import build_payload
 
 

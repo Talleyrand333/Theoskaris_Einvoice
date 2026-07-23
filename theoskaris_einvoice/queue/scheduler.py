@@ -2,7 +2,7 @@
 
 import frappe
 
-from theoskaris_einvoice.doctype.firs_queue.firs_queue import FIRSQueue
+from theoskaris_einvoice.firs_e_invoice.doctype.firs_queue.firs_queue import FIRSQueue
 from theoskaris_einvoice.queue.processor import process_queue_item
 
 
