@@ -87,7 +87,7 @@ def process_queue_item(queue_name: str):
 				document_name=queue.document_name,
 				request_payload=json.dumps({"irn": irn}),
 				response_data=json.dumps(e.response_body, default=str) if e.response_body else str(e),
-				status="Skipped",
+				status="Error",
 				response_status_code=str(e.status_code) if e.status_code else "",
 				retry_attempt=queue.retry_count,
 				processing_time=round(time.time() * 1000 - start, 2),
