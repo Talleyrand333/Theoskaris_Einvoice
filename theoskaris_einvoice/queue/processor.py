@@ -75,31 +75,27 @@ def process_queue_item(queue_name: str):
 
 		sign_ms = round(time.time() * 1000 - start, 2)
 
-		# Step 3: transmit by IRN
+		# Step 3: transmit by IRN (optional — skip if API key lacks transmit permission)
 		start = time.time() * 1000
 		try:
 			resp_transmit = client.transmit_invoice(irn)
+			transmit_ms = round(time.time() * 1000 - start, 2)
 		except FIRSAPIError as e:
+			# Log but don't fail — sign already creates the invoice in eTranzact
 			log_request(
 				document_type=queue.document_type,
 				document_name=queue.document_name,
 				request_payload=json.dumps({"irn": irn}),
 				response_data=json.dumps(e.response_body, default=str) if e.response_body else str(e),
-				status="Error",
+				status="Skipped",
 				response_status_code=str(e.status_code) if e.status_code else "",
 				retry_attempt=queue.retry_count,
 				processing_time=round(time.time() * 1000 - start, 2),
 				api_version="v1",
 				error_message=str(e),
 			)
-			if client.is_retryable(e):
-				queue.mark_failed(e)
-			else:
-				queue.mark_failed(e, increment_retry=False)
-			_set_invoice_status(inv, "Error", error=str(e))
-			raise
-
-		transmit_ms = round(time.time() * 1000 - start, 2)
+			resp_transmit = None
+			transmit_ms = 0
 
 		# Step 4: confirm the transmitted invoice
 		start = time.time() * 1000
@@ -112,7 +108,7 @@ def process_queue_item(queue_name: str):
 		confirm_ms = round(time.time() * 1000 - start, 2) if resp_confirm else 0
 
 		# Persist IRN + response back to invoice
-		qr_code = _extract_qr_code(resp_validate) or _extract_qr_code(resp_transmit) or _extract_qr_code(resp_confirm)
+		qr_code = _extract_qr_code(resp_validate) or (_extract_qr_code(resp_transmit) if resp_transmit else None) or (_extract_qr_code(resp_confirm) if resp_confirm else None)
 		_response = {
 			"validate_response": resp_validate,
 			"sign_response": resp_sign,
@@ -121,7 +117,7 @@ def process_queue_item(queue_name: str):
 		}
 		_set_invoice_status(
 			inv,
-			status="Transmitted",
+			status="Transmitted" if resp_transmit else "Signed",
 			irn=irn,
 			qr_code=qr_code,
 			response=_response,
