@@ -331,9 +331,23 @@ def _build_payment_means(inv) -> list:
 def _generate_internal_irn(inv, company) -> str:
 	"""Generate a temporary IRN-like reference before real IRN is returned.
 
-	FIRS IRN is generated from invoice number + service_id + issuance date (YYYYMMDD).
-	We use the same shape so the API can replace it.
+	FIRS IRN must follow the eTranzact template:
+	  {invoice_no}-{entity_seg2}{business_seg2}-{issue_date_YYYYMMDD}
+	All uppercase, only '-' special character allowed.
 	"""
-	service_id = company.get("custom_firs_service_id") or ""
+	# Extract IRN segment from Entity ID (service_id) + Business ID per dashboard template
+	entity_id = company.get("custom_firs_service_id") or ""
+	business_id = company.get("custom_firs_business_id") or ""
+
+	def _segment2(uuid_str: str) -> str:
+		parts = uuid_str.split("-")
+		return parts[1] if len(parts) >= 2 else ""
+
+	irn_segment = (_segment2(entity_id) + _segment2(business_id)).upper()
+	if not irn_segment:
+		irn_segment = (company.get("custom_firs_service_id") or "").upper()
+
 	issuance = str(inv.posting_date).replace("-", "")
-	return f"{inv.name}-{service_id}-{issuance}"
+	# Invoice number uppercased and safe
+	inv_ref = inv.name.upper()
+	return f"{inv_ref}-{irn_segment}-{issuance}"
