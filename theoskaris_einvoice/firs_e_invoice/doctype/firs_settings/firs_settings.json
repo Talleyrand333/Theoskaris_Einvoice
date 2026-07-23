@@ -4,15 +4,12 @@
     "autoname": "",
     "creation": "2026-07-23 23:00:00.000000",
     "default_view": "",
-    "doctype": "DocType"
-,
+    "doctype": "DocType",
     "editable_grid": 0,
     "engine": "InnoDB",
     "field_order": [
         "enable_sales_invoice",
-        "enable_purchase_invoice",
-        "sb_defaults",
-        "auto_submit_on_complete"
+        "enable_purchase_invoice"
     ],
     "fields": [
         {
@@ -25,17 +22,6 @@
             "fieldname": "enable_purchase_invoice",
             "fieldtype": "Check",
             "label": "Enable for Purchase Invoice",
-            "default": "0"
-        },
-        {
-            "fieldname": "sb_defaults",
-            "fieldtype": "Section Break",
-            "label": "Defaults"
-        },
-        {
-            "fieldname": "auto_submit_on_complete",
-            "fieldtype": "Check",
-            "label": "Auto-submit on FIRS Complete",
             "default": "0"
         }
     ],

@@ -8,8 +8,20 @@ class FIRSValidationError(Exception):
 	pass
 
 
+def _get_counterparty(inv):
+	"""Get the counterparty (Customer for Sales Invoice, Supplier for Purchase Invoice)."""
+	if inv.doctype == "Purchase Invoice":
+		return frappe.get_doc("Supplier", inv.supplier)
+	return frappe.get_doc("Customer", inv.customer)
+
+
+def _get_tin(counterparty) -> str:
+	"""Get TIN from a Customer or Supplier."""
+	return counterparty.get("custom_firs_tin") or counterparty.get("tax_id") or ""
+
+
 def validate_sales_invoice(inv) -> list:
-	"""Run hard validation before submitting a Sales Invoice to FIRS."""
+	"""Run hard validation before submitting a Sales/Purchase Invoice to FIRS."""
 	errors = []
 
 	company = frappe.get_doc("Company", inv.company)
@@ -38,17 +50,21 @@ def validate_sales_invoice(inv) -> list:
 		if not item.get("custom_firs_hsn_code"):
 			pass  # HSN not mandatory for services in v1; log only
 
-	customer = frappe.get_doc("Customer", inv.customer)
-	if not customer.get("custom_firs_tin") and not customer.get("tax_id"):
-		# B2C is allowed with placeholder, but warn if not explicitly B2C intended
-		pass
+	# Validate the counterparty (Customer for SI, Supplier for PI)
+	try:
+		counterparty = _get_counterparty(inv)
+		tin = _get_tin(counterparty)
+		if not tin:
+			pass  # B2C/B2B allowed without TIN, logged only
+	except Exception:
+		pass  # Counterparty validation is optional
 
 	# Credit notes must reference an already-transmitted original invoice
 	if inv.is_return:
 		if not inv.return_against:
 			errors.append(_("Credit Note must reference the original invoice (Return Against)"))
 		else:
-			original_irn = frappe.db.get_value("Sales Invoice", inv.return_against, "custom_nrs_irn")
+			original_irn = frappe.db.get_value(inv.doctype, inv.return_against, "custom_nrs_irn")
 			if not original_irn:
 				errors.append(
 					_(
