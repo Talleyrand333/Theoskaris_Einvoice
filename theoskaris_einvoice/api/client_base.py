@@ -64,6 +64,21 @@ class BaseFIRSClient(ABC):
 			)
 		return body
 
+	def sign_invoice(self, payload: dict) -> dict:
+		"""Sign a validated invoice payload.
+
+		Returns 201 with {"ok": True} on success.
+		"""
+		resp = self._request("POST", "/api/v1/invoice/sign", payload=payload)
+		body = self._parse_response(resp)
+		if not resp.ok:
+			raise FIRSAPIError(
+				f"FIRS signing failed: {body}",
+				status_code=resp.status_code,
+				response_body=body,
+			)
+		return body
+
 	def transmit_invoice(self, irn: str) -> dict:
 		"""Transmit an already signed/validated invoice by IRN.
 

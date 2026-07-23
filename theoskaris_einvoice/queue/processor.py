@@ -49,7 +49,33 @@ def process_queue_item(queue_name: str):
 		validate_ms = round(time.time() * 1000 - start, 2)
 		irn = _extract_irn(resp_validate) or payload.get("irn")
 
-		# Step 2: transmit by IRN
+		# Step 2: sign the validated invoice
+		start = time.time() * 1000
+		try:
+			resp_sign = client.sign_invoice(payload)
+		except FIRSAPIError as e:
+			log_request(
+				document_type=queue.document_type,
+				document_name=queue.document_name,
+				request_payload=payload_json,
+				response_data=json.dumps(e.response_body, default=str) if e.response_body else str(e),
+				status="Error" if e.status_code and e.status_code >= 500 else "Invalid",
+				response_status_code=str(e.status_code) if e.status_code else "",
+				retry_attempt=queue.retry_count,
+				processing_time=round(time.time() * 1000 - start, 2),
+				api_version="v1",
+				error_message=str(e),
+			)
+			if client.is_retryable(e):
+				queue.mark_failed(e)
+			else:
+				queue.mark_failed(e, increment_retry=False)
+			_set_invoice_status(inv, "Error", error=str(e))
+			raise
+
+		sign_ms = round(time.time() * 1000 - start, 2)
+
+		# Step 3: transmit by IRN
 		start = time.time() * 1000
 		try:
 			resp_transmit = client.transmit_invoice(irn)
@@ -63,7 +89,7 @@ def process_queue_item(queue_name: str):
 				response_status_code=str(e.status_code) if e.status_code else "",
 				retry_attempt=queue.retry_count,
 				processing_time=round(time.time() * 1000 - start, 2),
-				api_version="v2",
+				api_version="v1",
 				error_message=str(e),
 			)
 			if client.is_retryable(e):
