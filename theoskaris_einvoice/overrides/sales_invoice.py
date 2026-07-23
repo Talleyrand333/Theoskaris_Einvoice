@@ -50,6 +50,13 @@ def on_submit(doc, method=None):
 			title="FIRS Queue",
 			indicator="blue",
 		)
+		# Enqueue processing immediately so the user doesn't have to wait for the cron
+		frappe.enqueue(
+			method="theoskaris_einvoice.queue.processor.process_queue_item",
+			queue="short",
+			job_name=f"firs-immediate-{queue_name}",
+			queue_name=queue_name,
+		)
 
 
 def before_cancel(doc, method=None):

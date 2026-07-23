@@ -54,7 +54,7 @@ class BaseFIRSClient(ABC):
 
 	def validate_invoice(self, payload: dict) -> dict:
 		"""Validate + sign invoice via APP endpoint. Returns parsed response."""
-		resp = self._request("POST", "/api/v2/app/invoice/validate", payload=payload)
+		resp = self._request("POST", "/api/v1/invoice/validate", payload=payload)
 		body = self._parse_response(resp)
 		if not resp.ok:
 			raise FIRSAPIError(
@@ -67,7 +67,7 @@ class BaseFIRSClient(ABC):
 	def transmit_invoice(self, irn: str) -> dict:
 		"""Transmit an already signed/validated invoice by IRN."""
 		payload = {"irn": irn}
-		resp = self._request("POST", "/api/v2/app/invoice/transmit", payload=payload)
+		resp = self._request("POST", "/api/v1/invoice/transmit", payload=payload)
 		body = self._parse_response(resp)
 		if not resp.ok:
 			raise FIRSAPIError(
@@ -80,7 +80,7 @@ class BaseFIRSClient(ABC):
 	def verify_tin(self, tin: str) -> dict:
 		"""Verify a taxpayer identification number."""
 		payload = {"tin": tin}
-		resp = self._request("POST", "/api/v2/resource/verify-tin", payload=payload)
+		resp = self._request("POST", "/api/v1/resource/verify-tin", payload=payload)
 		body = self._parse_response(resp)
 		if not resp.ok:
 			raise FIRSAPIError(
