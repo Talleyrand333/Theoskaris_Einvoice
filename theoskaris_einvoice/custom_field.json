@@ -230,7 +230,7 @@
         "fieldname": "custom_firs_tab",
         "label": "FIRS E-Invoicing",
         "fieldtype": "Section Break",
-        "insert_after": "supplier"
+        "insert_after": "items"
     },
     {
         "dt": "Purchase Invoice",
