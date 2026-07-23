@@ -73,7 +73,7 @@ def build_payload(invoice: str | Any) -> dict:
 		"tax_point_date": issue_date,
 		"document_currency_code": inv.currency,
 		"tax_currency_code": inv.currency,
-		"buyer_reference": inv.get("cost_center") or inv.customer,
+		"buyer_reference": inv.get("cost_center") or (inv.supplier if is_purchase else inv.customer),
 		"order_reference": inv.get("po_no") or inv.name,
 		"accounting_supplier_party": supplier_party,
 		"accounting_customer_party": customer_party,
