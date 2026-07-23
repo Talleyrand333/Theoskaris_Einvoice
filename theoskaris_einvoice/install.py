@@ -12,15 +12,24 @@ APP_DIR = Path(__file__).resolve().parent
 
 
 def after_install():
-	"""Seed reference data and ensure custom fields exist."""
-	# DocTypes are synced before after_install, but the controller module
-	# may not be importable if the app path isn't on sys.path yet.
-	# Reload controllers first.
+	"""Seed reference data, settings, and ensure custom fields exist."""
 	frappe.clear_cache(doctype="FIRS Tax Category")
 	frappe.clear_cache(doctype="FIRS Payment Means Code")
+	frappe.clear_cache(doctype="FIRS Settings")
+	_create_firs_settings()
 	create_firs_custom_fields()
 	seed_tax_categories()
 	seed_payment_means_codes()
+
+
+def _create_firs_settings():
+	"""Create default FIRS Settings if not exists."""
+	if not frappe.db.exists("FIRS Settings", "FIRS Settings"):
+		settings = frappe.new_doc("FIRS Settings")
+		settings.enable_sales_invoice = 1
+		settings.enable_purchase_invoice = 0
+		settings.insert(ignore_permissions=True)
+		frappe.db.commit()
 
 
 def create_firs_custom_fields():

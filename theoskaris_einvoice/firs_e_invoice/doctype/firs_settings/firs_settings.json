@@ -1,0 +1,68 @@
+{
+    "actions": [],
+    "allow_rename": 0,
+    "autoname": "",
+    "creation": "2026-07-23 23:00:00.000000",
+    "default_view": "",
+    "doctype": "DocType"
+,
+    "editable_grid": 0,
+    "engine": "InnoDB",
+    "field_order": [
+        "enable_sales_invoice",
+        "enable_purchase_invoice",
+        "sb_defaults",
+        "auto_submit_on_complete"
+    ],
+    "fields": [
+        {
+            "fieldname": "enable_sales_invoice",
+            "fieldtype": "Check",
+            "label": "Enable for Sales Invoice",
+            "default": "1"
+        },
+        {
+            "fieldname": "enable_purchase_invoice",
+            "fieldtype": "Check",
+            "label": "Enable for Purchase Invoice",
+            "default": "0"
+        },
+        {
+            "fieldname": "sb_defaults",
+            "fieldtype": "Section Break",
+            "label": "Defaults"
+        },
+        {
+            "fieldname": "auto_submit_on_complete",
+            "fieldtype": "Check",
+            "label": "Auto-submit on FIRS Complete",
+            "default": "0"
+        }
+    ],
+    "issingle": 1,
+    "istable": 0,
+    "max_attachments": 0,
+    "modified": "2026-07-23 23:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "FIRS E-Invoice",
+    "name": "FIRS Settings",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "print": 1,
+            "read": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 0,
+    "custom": 1,
+    "app": "theoskaris_einvoice"
+}

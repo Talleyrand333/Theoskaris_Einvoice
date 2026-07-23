@@ -1,4 +1,4 @@
-"""Build FIRS / eTranzact UBL JSON payload from ERPNext Sales Invoice."""
+"""Build FIRS / eTranzact UBL JSON payload from ERPNext Sales or Purchase Invoice."""
 
 from typing import Any
 
@@ -17,20 +17,32 @@ PLACEHOLDER_ADDRESS = {
 }
 
 
-def build_payload(sales_invoice: str | Any) -> dict:
-	"""Build the eTranzact ValidateInvoiceRequestV2 payload for a Sales Invoice."""
-	if isinstance(sales_invoice, str):
-		inv = frappe.get_doc("Sales Invoice", sales_invoice)
+def build_payload(invoice: str | Any) -> dict:
+	"""Build the eTranzact ValidateInvoiceRequest payload for Sales or Purchase Invoice."""
+	if isinstance(invoice, str):
+		inv = frappe.get_doc(invoice)  # Can be Sales Invoice or Purchase Invoice
 	else:
-		inv = sales_invoice
+		inv = invoice
 
 	company = frappe.get_doc("Company", inv.company)
-	customer = frappe.get_doc("Customer", inv.customer)
+
+	# Sales Invoice: company = supplier/seller, customer = buyer
+	# Purchase Invoice: company = buyer/customer, supplier = seller
+	is_purchase = inv.doctype == "Purchase Invoice"
+
+	if is_purchase:
+		supplier = frappe.get_doc("Supplier", inv.supplier)
+		customer = company  # For PI, company is the buyer
+		invoice_kind = "B2B" if supplier.get("tax_id") else "B2C"
+		supplier_party = _build_supplier_from_supplier(supplier)
+		customer_party = _build_customer_from_company(company)
+	else:
+		customer = frappe.get_doc("Customer", inv.customer)
+		invoice_kind = _get_invoice_kind(customer)
+		supplier_party = _build_supplier_party(company)
+		customer_party = _build_customer_party(customer)
 
 	invoice_type_code = "381" if not inv.is_return else "380"
-	invoice_kind = _get_invoice_kind(customer)
-	supplier_party = _build_supplier_party(company)
-	customer_party = _build_customer_party(customer)
 	lines = _build_invoice_lines(inv)
 	tax_total = _build_tax_total(inv)
 	legal_monetary_total = _build_legal_monetary_total(inv, tax_total)
@@ -76,12 +88,12 @@ def build_payload(sales_invoice: str | Any) -> dict:
 
 	# Credit notes reference the original invoice IRN
 	if inv.is_return and inv.return_against:
-		original_irn = frappe.db.get_value("Sales Invoice", inv.return_against, "custom_nrs_irn")
+		original_irn = frappe.db.get_value(inv.doctype, inv.return_against, "custom_nrs_irn")
 		if original_irn:
 			payload["billing_reference"] = [
 				{
 					"irn": original_irn,
-					"issue_date": frappe.db.get_value("Sales Invoice", inv.return_against, "posting_date"),
+					"issue_date": frappe.db.get_value(inv.doctype, inv.return_against, "posting_date"),
 				}
 			]
 
@@ -135,6 +147,37 @@ def _build_customer_party(customer) -> dict:
 		"email": customer.get("email_id") or _get_contact_email(customer.name) or "",
 		"telephone": phone or "",
 		"business_description": customer.get("custom_firs_business_description") or customer.customer_name,
+		"postal_address": address,
+	}
+
+
+def _build_supplier_from_supplier(supplier) -> dict:
+	"""Build accounting supplier party from Supplier doc (Purchase Invoice)."""
+	tin = supplier.get("tax_id") or PLACEHOLDER_TIN
+	address = _get_address(supplier.name, "Supplier") or PLACEHOLDER_ADDRESS
+	phone = _normalize_phone(supplier.get("mobile_no"))
+	if not phone:
+		phone = _get_contact_phone(supplier.name)
+	return {
+		"party_name": supplier.supplier_name,
+		"tin": str(tin).strip(),
+		"email": supplier.get("email_id") or _get_contact_email(supplier.name) or "",
+		"telephone": phone or "",
+		"business_description": supplier.supplier_name,
+		"postal_address": address,
+	}
+
+
+def _build_customer_from_company(company) -> dict:
+	"""Build accounting customer party from Company (Purchase Invoice buyer)."""
+	tin = company.get("custom_firs_company_tin") or company.get("tax_id") or PLACEHOLDER_TIN
+	address = _get_address(company.name, "Company") or PLACEHOLDER_ADDRESS
+	return {
+		"party_name": company.company_name,
+		"tin": str(tin).strip(),
+		"email": company.get("email") or "",
+		"telephone": _normalize_phone(company.get("phone_no")) or "",
+		"business_description": company.company_name,
 		"postal_address": address,
 	}
 

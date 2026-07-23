@@ -1,228 +1,299 @@
 [
-	{
-		"doctype": "Custom Field",
-		"dt": "Company",
-		"fieldname": "custom_firs_e_invoicing_tab",
-		"label": "FIRS E-Invoicing",
-		"fieldtype": "Tab Break",
-		"insert_after": "default_currency",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Company",
-		"fieldname": "custom_firs_enabled",
-		"label": "Enable FIRS E-Invoicing",
-		"fieldtype": "Check",
-		"insert_after": "custom_firs_e_invoicing_tab",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Company",
-		"fieldname": "custom_firs_api_base_url",
-		"label": "FIRS API Base URL",
-		"fieldtype": "Data",
-		"insert_after": "custom_firs_enabled",
-		"default": "https://eivc-k6z6d.ondigitalocean.app",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Company",
-		"fieldname": "custom_firs_report_base_url",
-		"label": "FIRS Report Base URL",
-		"fieldtype": "Data",
-		"insert_after": "custom_firs_api_base_url",
-		"default": "https://api.firsmbs.com",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Company",
-		"fieldname": "custom_firs_api_key",
-		"label": "FIRS API Key",
-		"fieldtype": "Password",
-		"insert_after": "custom_firs_report_base_url",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Company",
-		"fieldname": "custom_firs_api_signature",
-		"label": "FIRS API Signature",
-		"fieldtype": "Password",
-		"insert_after": "custom_firs_api_key",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Company",
-		"fieldname": "custom_firs_business_id",
-		"label": "FIRS Business ID",
-		"fieldtype": "Data",
-		"insert_after": "custom_firs_api_signature",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Company",
-		"fieldname": "custom_firs_service_id",
-		"label": "FIRS Service ID",
-		"fieldtype": "Data",
-		"insert_after": "custom_firs_business_id",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Company",
-		"fieldname": "custom_firs_company_tin",
-		"label": "FIRS Company TIN",
-		"fieldtype": "Data",
-		"insert_after": "custom_firs_service_id",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Company",
-		"fieldname": "custom_firs_certificate",
-		"label": "FIRS Digital Certificate",
-		"fieldtype": "Attach",
-		"insert_after": "custom_firs_company_tin",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Company",
-		"fieldname": "custom_firs_verify_ssl",
-		"label": "Verify SSL",
-		"fieldtype": "Check",
-		"insert_after": "custom_firs_certificate",
-		"default": "1",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Sales Invoice",
-		"fieldname": "custom_firs_tab",
-		"label": "FIRS E-Invoicing",
-		"fieldtype": "Tab Break",
-		"insert_after": "more_info",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Sales Invoice",
-		"fieldname": "custom_submit_to_nrs",
-		"label": "Submit to FIRS",
-		"fieldtype": "Check",
-		"insert_after": "custom_firs_tab",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Sales Invoice",
-		"fieldname": "custom_nrs_status",
-		"label": "FIRS Status",
-		"fieldtype": "Select",
-		"options": "Pending\nValid\nInvalid\nError\nTransmitted",
-		"insert_after": "custom_submit_to_nrs",
-		"read_only": 1,
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Sales Invoice",
-		"fieldname": "custom_nrs_irn",
-		"label": "FIRS IRN",
-		"fieldtype": "Data",
-		"insert_after": "custom_nrs_status",
-		"read_only": 1,
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Sales Invoice",
-		"fieldname": "custom_nrs_qr_code",
-		"label": "FIRS QR Code",
-		"fieldtype": "Long Text",
-		"insert_after": "custom_nrs_irn",
-		"read_only": 1,
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Sales Invoice",
-		"fieldname": "custom_nrs_qr_code_url",
-		"label": "FIRS QR Code URL",
-		"fieldtype": "Data",
-		"insert_after": "custom_nrs_qr_code",
-		"read_only": 1,
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Sales Invoice",
-		"fieldname": "custom_nrs_response",
-		"label": "FIRS Response",
-		"fieldtype": "Long Text",
-		"insert_after": "custom_nrs_qr_code_url",
-		"read_only": 1,
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Sales Invoice",
-		"fieldname": "custom_nrs_datetime",
-		"label": "FIRS Date/Time",
-		"fieldtype": "Datetime",
-		"insert_after": "custom_nrs_response",
-		"read_only": 1,
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Customer",
-		"fieldname": "custom_firs_tab",
-		"label": "FIRS E-Invoicing",
-		"fieldtype": "Tab Break",
-		"insert_after": "tax_id",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Customer",
-		"fieldname": "custom_firs_tin",
-		"label": "FIRS TIN",
-		"fieldtype": "Data",
-		"insert_after": "custom_firs_tab",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Customer",
-		"fieldname": "custom_firs_customer_id",
-		"label": "FIRS Customer ID",
-		"fieldtype": "Data",
-		"insert_after": "custom_firs_tin",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Customer",
-		"fieldname": "custom_firs_business_description",
-		"label": "FIRS Business Description",
-		"fieldtype": "Data",
-		"insert_after": "custom_firs_customer_id",
-		"module": "Theoskaris Einvoice"
-	},
-	{
-		"doctype": "Custom Field",
-		"dt": "Sales Invoice Item",
-		"fieldname": "custom_firs_hsn_code",
-		"label": "FIRS HSN Code",
-		"fieldtype": "Data",
-		"insert_after": "description",
-		"module": "Theoskaris Einvoice"
-	}
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
+        "fieldname": "custom_firs_e_invoicing_tab",
+        "label": "FIRS E-Invoicing",
+        "fieldtype": "Tab Break",
+        "insert_after": "default_currency",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
+        "fieldname": "custom_firs_enabled",
+        "label": "Enable FIRS E-Invoicing",
+        "fieldtype": "Check",
+        "insert_after": "custom_firs_e_invoicing_tab",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
+        "fieldname": "custom_firs_api_base_url",
+        "label": "FIRS API Base URL",
+        "fieldtype": "Data",
+        "insert_after": "custom_firs_enabled",
+        "default": "https://eivc-k6z6d.ondigitalocean.app",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
+        "fieldname": "custom_firs_report_base_url",
+        "label": "FIRS Report Base URL",
+        "fieldtype": "Data",
+        "insert_after": "custom_firs_api_base_url",
+        "default": "https://api.firsmbs.com",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
+        "fieldname": "custom_firs_api_key",
+        "label": "FIRS API Key",
+        "fieldtype": "Password",
+        "insert_after": "custom_firs_report_base_url",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
+        "fieldname": "custom_firs_api_signature",
+        "label": "FIRS API Signature",
+        "fieldtype": "Password",
+        "insert_after": "custom_firs_api_key",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
+        "fieldname": "custom_firs_business_id",
+        "label": "FIRS Business ID",
+        "fieldtype": "Data",
+        "insert_after": "custom_firs_api_signature",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
+        "fieldname": "custom_firs_service_id",
+        "label": "FIRS Service ID",
+        "fieldtype": "Data",
+        "insert_after": "custom_firs_business_id",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
+        "fieldname": "custom_firs_company_tin",
+        "label": "FIRS Company TIN",
+        "fieldtype": "Data",
+        "insert_after": "custom_firs_service_id",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
+        "fieldname": "custom_firs_certificate",
+        "label": "FIRS Digital Certificate",
+        "fieldtype": "Attach",
+        "insert_after": "custom_firs_company_tin",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
+        "fieldname": "custom_firs_verify_ssl",
+        "label": "Verify SSL",
+        "fieldtype": "Check",
+        "insert_after": "custom_firs_certificate",
+        "default": "1",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Sales Invoice",
+        "fieldname": "custom_firs_tab",
+        "label": "FIRS E-Invoicing",
+        "fieldtype": "Tab Break",
+        "insert_after": "more_info",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Sales Invoice",
+        "fieldname": "custom_submit_to_nrs",
+        "label": "Submit to FIRS",
+        "fieldtype": "Check",
+        "insert_after": "custom_firs_tab",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Sales Invoice",
+        "fieldname": "custom_nrs_status",
+        "label": "FIRS Status",
+        "fieldtype": "Select",
+        "options": "Pending\nValid\nInvalid\nError\nTransmitted",
+        "insert_after": "custom_submit_to_nrs",
+        "read_only": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Sales Invoice",
+        "fieldname": "custom_nrs_irn",
+        "label": "FIRS IRN",
+        "fieldtype": "Data",
+        "insert_after": "custom_nrs_status",
+        "read_only": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Sales Invoice",
+        "fieldname": "custom_nrs_qr_code",
+        "label": "FIRS QR Code",
+        "fieldtype": "Long Text",
+        "insert_after": "custom_nrs_irn",
+        "read_only": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Sales Invoice",
+        "fieldname": "custom_nrs_qr_code_url",
+        "label": "FIRS QR Code URL",
+        "fieldtype": "Data",
+        "insert_after": "custom_nrs_qr_code",
+        "read_only": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Sales Invoice",
+        "fieldname": "custom_nrs_response",
+        "label": "FIRS Response",
+        "fieldtype": "Long Text",
+        "insert_after": "custom_nrs_qr_code_url",
+        "read_only": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Sales Invoice",
+        "fieldname": "custom_nrs_datetime",
+        "label": "FIRS Date/Time",
+        "fieldtype": "Datetime",
+        "insert_after": "custom_nrs_response",
+        "read_only": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Customer",
+        "fieldname": "custom_firs_tab",
+        "label": "FIRS E-Invoicing",
+        "fieldtype": "Tab Break",
+        "insert_after": "tax_id",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Customer",
+        "fieldname": "custom_firs_tin",
+        "label": "FIRS TIN",
+        "fieldtype": "Data",
+        "insert_after": "custom_firs_tab",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Customer",
+        "fieldname": "custom_firs_customer_id",
+        "label": "FIRS Customer ID",
+        "fieldtype": "Data",
+        "insert_after": "custom_firs_tin",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Customer",
+        "fieldname": "custom_firs_business_description",
+        "label": "FIRS Business Description",
+        "fieldtype": "Data",
+        "insert_after": "custom_firs_customer_id",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Sales Invoice Item",
+        "fieldname": "custom_firs_hsn_code",
+        "label": "FIRS HSN Code",
+        "fieldtype": "Data",
+        "insert_after": "description",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_firs_tab",
+        "label": "FIRS E-Invoicing",
+        "fieldtype": "Tab Break",
+        "insert_after": "supplier"
+    },
+    {
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_submit_to_nrs",
+        "label": "Submit to NRS",
+        "fieldtype": "Check",
+        "insert_after": "custom_firs_tab",
+        "description": "Check to submit this purchase invoice to FIRS e-Invoicing system"
+    },
+    {
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_status",
+        "label": "NRS Status",
+        "fieldtype": "Select",
+        "options": "\nPending\nSubmitted\nTransmitted\nError",
+        "insert_after": "custom_submit_to_nrs",
+        "read_only": 1
+    },
+    {
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_irn",
+        "label": "NRS IRN",
+        "fieldtype": "Data",
+        "insert_after": "custom_nrs_status",
+        "read_only": 1
+    },
+    {
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_qr_code",
+        "label": "NRS QR Code",
+        "fieldtype": "Long Text",
+        "insert_after": "custom_nrs_irn",
+        "read_only": 1
+    },
+    {
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_qr_code_url",
+        "label": "NRS QR Code URL",
+        "fieldtype": "Data",
+        "insert_after": "custom_nrs_qr_code",
+        "read_only": 1
+    },
+    {
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_response",
+        "label": "NRS Response",
+        "fieldtype": "Long Text",
+        "insert_after": "custom_nrs_qr_code_url",
+        "read_only": 1
+    },
+    {
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_datetime",
+        "label": "NRS DateTime",
+        "fieldtype": "Datetime",
+        "insert_after": "custom_nrs_response",
+        "read_only": 1
+    },
+    {
+        "dt": "Purchase Invoice Item",
+        "fieldname": "custom_firs_hsn_code",
+        "label": "FIRS HSN Code",
+        "fieldtype": "Data",
+        "insert_after": "description"
+    }
 ]
