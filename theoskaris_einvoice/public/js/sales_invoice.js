@@ -1,4 +1,4 @@
-"""Sales Invoice client script for FIRS e-Invoicing."""
+// Sales Invoice client script for FIRS e-Invoicing.
 
 frappe.ui.form.on("Sales Invoice", {
 	refresh(frm) {

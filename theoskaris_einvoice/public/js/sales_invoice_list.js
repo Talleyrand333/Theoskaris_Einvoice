@@ -1,4 +1,4 @@
-"""Sales Invoice list view button for bulk FIRS submission."""
+// Sales Invoice list view button for bulk FIRS submission.
 
 frappe.listview_settings["Sales Invoice"] = {
 	onload(listview) {
