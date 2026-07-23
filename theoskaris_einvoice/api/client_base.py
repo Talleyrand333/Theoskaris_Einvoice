@@ -65,9 +65,11 @@ class BaseFIRSClient(ABC):
 		return body
 
 	def transmit_invoice(self, irn: str) -> dict:
-		"""Transmit an already signed/validated invoice by IRN."""
-		payload = {"irn": irn}
-		resp = self._request("POST", "/api/v1/invoice/transmit", payload=payload)
+		"""Transmit an already signed/validated invoice by IRN.
+
+		IRN is passed in the URL path, not the request body.
+		"""
+		resp = self._request("POST", f"/api/v1/invoice/transmit/{irn}", payload={})
 		body = self._parse_response(resp)
 		if not resp.ok:
 			raise FIRSAPIError(

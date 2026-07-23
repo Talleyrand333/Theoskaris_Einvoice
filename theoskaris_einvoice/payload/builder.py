@@ -185,6 +185,19 @@ def _get_contact_email(customer_name: str) -> str:
 	return ""
 
 
+def _format_hsn(hsn: str) -> str:
+	"""Ensure HSN code has 2 decimal places (format: 0000.00)."""
+	hsn = str(hsn).strip()
+	if "." not in hsn:
+		return f"{hsn}.00"
+	parts = hsn.split(".")
+	if len(parts[1]) == 0:
+		return f"{parts[0]}.00"
+	if len(parts[1]) == 1:
+		return f"{hsn}0"
+	return hsn
+
+
 def _normalize_phone(phone) -> str:
 	"""Normalize Nigerian phone to E.164-ish +234 format."""
 	if not phone:
@@ -222,7 +235,7 @@ def _build_invoice_lines(inv) -> list:
 					"base_quantity": 1,
 					"price_unit": f"{inv.currency} per {item.uom}",
 				},
-				"hsn_code": item.get("custom_firs_hsn_code") or "0000.00",
+				"hsn_code": _format_hsn(item.get("custom_firs_hsn_code") or "0000.00"),
 				"product_category": item.get("item_group") or "General",
 				"invoiced_quantity": qty,
 				"line_extension_amount": line_ext,
