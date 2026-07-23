@@ -36,7 +36,7 @@ def process_queue_item(queue_name: str):
 				response_status_code=str(e.status_code) if e.status_code else "",
 				retry_attempt=queue.retry_count,
 				processing_time=round(time.time() * 1000 - start, 2),
-				api_version="v2",
+				api_version="v1",
 				error_message=str(e),
 			)
 			if client.is_retryable(e):
@@ -101,11 +101,23 @@ def process_queue_item(queue_name: str):
 
 		transmit_ms = round(time.time() * 1000 - start, 2)
 
+		# Step 4: confirm the transmitted invoice
+		start = time.time() * 1000
+		try:
+			resp_confirm = client.confirm_invoice(irn)
+		except FIRSAPIError:
+			# Confirm is optional — log but don't fail
+			resp_confirm = None
+
+		confirm_ms = round(time.time() * 1000 - start, 2) if resp_confirm else 0
+
 		# Persist IRN + response back to invoice
-		qr_code = _extract_qr_code(resp_validate) or _extract_qr_code(resp_transmit)
+		qr_code = _extract_qr_code(resp_validate) or _extract_qr_code(resp_transmit) or _extract_qr_code(resp_confirm)
 		_response = {
 			"validate_response": resp_validate,
+			"sign_response": resp_sign,
 			"transmit_response": resp_transmit,
+			"confirm_response": resp_confirm,
 		}
 		_set_invoice_status(
 			inv,
@@ -125,8 +137,8 @@ def process_queue_item(queue_name: str):
 			response_status_code="200",
 			retry_attempt=queue.retry_count,
 			irn=irn,
-			processing_time=validate_ms + transmit_ms,
-			api_version="v2",
+			processing_time=validate_ms + sign_ms + transmit_ms + confirm_ms,
+			api_version="v1",
 		)
 
 		queue.mark_completed(response=json.dumps(_response, default=str))

@@ -94,14 +94,40 @@ class BaseFIRSClient(ABC):
 			)
 		return body
 
-	def verify_tin(self, tin: str) -> dict:
-		"""Verify a taxpayer identification number."""
-		payload = {"tin": tin}
-		resp = self._request("POST", "/api/v1/resource/verify-tin", payload=payload)
+	def confirm_invoice(self, irn: str) -> dict:
+		"""Confirm/check a signed invoice by IRN.
+
+		GET request per API docs.
+		"""
+		resp = self._request("GET", f"/api/v1/invoice/confirm/{irn}")
 		body = self._parse_response(resp)
 		if not resp.ok:
 			raise FIRSAPIError(
-				f"FIRS TIN verification failed: {body}",
+				f"FIRS confirm failed: {body}",
+				status_code=resp.status_code,
+				response_body=body,
+			)
+		return body
+
+	def download_invoice(self, irn: str) -> dict:
+		"""Download a transmitted invoice by IRN."""
+		resp = self._request("GET", f"/api/v1/invoice/download/{irn}")
+		body = self._parse_response(resp)
+		if not resp.ok:
+			raise FIRSAPIError(
+				f"FIRS download failed: {body}",
+				status_code=resp.status_code,
+				response_body=body,
+			)
+		return body
+
+	def verify_tin(self, tin: str) -> dict:
+		"""Lookup a taxpayer by TIN."""
+		resp = self._request("GET", f"/api/v1/invoice/transmit/lookup/tin/{tin}")
+		body = self._parse_response(resp)
+		if not resp.ok:
+			raise FIRSAPIError(
+				f"FIRS TIN lookup failed: {body}",
 				status_code=resp.status_code,
 				response_body=body,
 			)
