@@ -1,0 +1,29 @@
+[
+ {
+  "description": "Standard VAT",
+  "docstatus": 0,
+  "doctype": "FIRS Tax Category",
+  "modified": "2026-07-03 10:08:54.539350",
+  "name": "STANDARD_VAT",
+  "tax_category_id": "STANDARD_VAT",
+  "tax_rate": 7.5
+ },
+ {
+  "description": "Zero-rated VAT",
+  "docstatus": 0,
+  "doctype": "FIRS Tax Category",
+  "modified": "2026-07-03 10:08:54.962175",
+  "name": "ZERO_VAT",
+  "tax_category_id": "ZERO_VAT",
+  "tax_rate": 0.0
+ },
+ {
+  "description": "VAT Exempt",
+  "docstatus": 0,
+  "doctype": "FIRS Tax Category",
+  "modified": "2026-07-03 10:08:54.967293",
+  "name": "EXEMPT",
+  "tax_category_id": "EXEMPT",
+  "tax_rate": 0.0
+ }
+]

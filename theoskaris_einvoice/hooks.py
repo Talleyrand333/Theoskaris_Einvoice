@@ -48,9 +48,6 @@ scheduler_events = {
 # ------------
 after_install = "theoskaris_einvoice.install.after_install"
 
-# Fixtures (custom fields created during install/exported via fixtures)
-# We create custom fields programmatically in install.py to avoid needing export/import.
-# Reference data DocTypes are exported as fixtures.
 fixtures = [
 	"FIRS Tax Category",
 	"FIRS Payment Means Code",

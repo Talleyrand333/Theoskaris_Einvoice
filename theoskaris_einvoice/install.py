@@ -25,7 +25,7 @@ def after_install():
 
 def create_firs_custom_fields():
 	"""Create custom fields on Company, Sales Invoice, Customer, Sales Invoice Item."""
-	with open(APP_DIR / "fixtures" / "custom_field.json", "r") as f:
+	with open(APP_DIR / "custom_field.json", "r") as f:
 		field_list = json.load(f)
 
 	grouped = {}

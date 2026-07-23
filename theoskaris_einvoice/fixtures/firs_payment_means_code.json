@@ -1,0 +1,56 @@
+[
+ {
+  "code": "01",
+  "description": "Cash",
+  "docstatus": 0,
+  "doctype": "FIRS Payment Means Code",
+  "modified": "2026-07-03 10:08:55.015576",
+  "name": "01",
+  "payment_terms_template": null
+ },
+ {
+  "code": "03",
+  "description": "Cheque",
+  "docstatus": 0,
+  "doctype": "FIRS Payment Means Code",
+  "modified": "2026-07-03 10:08:55.030026",
+  "name": "03",
+  "payment_terms_template": null
+ },
+ {
+  "code": "10",
+  "description": "Bank Transfer",
+  "docstatus": 0,
+  "doctype": "FIRS Payment Means Code",
+  "modified": "2026-07-03 10:08:55.034163",
+  "name": "10",
+  "payment_terms_template": null
+ },
+ {
+  "code": "30",
+  "description": "Card / POS",
+  "docstatus": 0,
+  "doctype": "FIRS Payment Means Code",
+  "modified": "2026-07-03 10:08:55.038826",
+  "name": "30",
+  "payment_terms_template": null
+ },
+ {
+  "code": "42",
+  "description": "Payment to bank account",
+  "docstatus": 0,
+  "doctype": "FIRS Payment Means Code",
+  "modified": "2026-07-03 10:08:55.042211",
+  "name": "42",
+  "payment_terms_template": null
+ },
+ {
+  "code": "49",
+  "description": "Direct debit",
+  "docstatus": 0,
+  "doctype": "FIRS Payment Means Code",
+  "modified": "2026-07-03 10:08:55.045355",
+  "name": "49",
+  "payment_terms_template": null
+ }
+]
