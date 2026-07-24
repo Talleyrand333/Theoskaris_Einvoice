@@ -15,6 +15,7 @@ app_include_js = "/assets/theoskaris_einvoice/js/theoskaris_einvoice.js"
 doctype_js = {
 	"Sales Invoice": "public/js/sales_invoice.js",
 	"Purchase Invoice": "public/js/purchase_invoice.js",
+	"FIRS Invoice Upload": "public/js/firs_invoice_upload.js",
 }
 doctype_list_js = {
 	"Sales Invoice": "public/js/sales_invoice_list.js",
@@ -36,7 +37,7 @@ doc_events = {
 		"on_submit": "theoskaris_einvoice.overrides.purchase_invoice.on_submit",
 		"before_cancel": "theoskaris_einvoice.overrides.purchase_invoice.before_cancel",
 		"on_cancel": "theoskaris_einvoice.overrides.purchase_invoice.on_cancel",
-	}
+	},
 }
 
 # Scheduled Tasks
@@ -55,8 +56,6 @@ scheduler_events = {
 # Installation
 # ------------
 after_install = "theoskaris_einvoice.install.after_install"
+after_migrate = "theoskaris_einvoice.install.create_firs_custom_fields"
 
-fixtures = [
-	"FIRS Tax Category",
-	"FIRS Payment Means Code",
-]
+fixtures = []

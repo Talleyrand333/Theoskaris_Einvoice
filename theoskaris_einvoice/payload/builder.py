@@ -140,11 +140,11 @@ def _build_customer_party(customer) -> dict:
 	address = _get_address(customer.name, "Customer") or PLACEHOLDER_ADDRESS
 	phone = _normalize_phone(customer.get("mobile_no"))
 	if not phone:
-		phone = _get_contact_phone(customer.name)
+		phone = _get_contact_phone(customer.name, "Customer")
 	return {
 		"party_name": customer.customer_name,
 		"tin": tin,
-		"email": customer.get("email_id") or _get_contact_email(customer.name) or "",
+		"email": customer.get("email_id") or _get_contact_email(customer.name, "Customer") or "",
 		"telephone": phone or "",
 		"business_description": customer.get("custom_firs_business_description") or customer.customer_name,
 		"postal_address": address,
@@ -157,11 +157,11 @@ def _build_supplier_from_supplier(supplier) -> dict:
 	address = _get_address(supplier.name, "Supplier") or PLACEHOLDER_ADDRESS
 	phone = _normalize_phone(supplier.get("mobile_no"))
 	if not phone:
-		phone = _get_contact_phone(supplier.name)
+		phone = _get_contact_phone(supplier.name, "Supplier")
 	return {
 		"party_name": supplier.supplier_name,
 		"tin": str(tin).strip(),
-		"email": supplier.get("email_id") or _get_contact_email(supplier.name) or "",
+		"email": supplier.get("email_id") or _get_contact_email(supplier.name, "Supplier") or "",
 		"telephone": phone or "",
 		"business_description": supplier.supplier_name,
 		"postal_address": address,
@@ -209,9 +209,15 @@ def _get_address(link_name, link_doctype) -> dict | None:
 	}
 
 
-def _get_contact_phone(customer_name: str) -> str:
-	"""Try to fetch phone from primary contact."""
-	contact_name = frappe.db.get_value("Customer", customer_name, "customer_primary_contact")
+def _get_contact_phone(party_name: str, doctype: str = "Customer") -> str:
+	"""Try to fetch phone from primary contact.
+
+	Works for Customer and Supplier doctypes.
+	"""
+	if doctype == "Customer":
+		contact_name = frappe.db.get_value("Customer", party_name, "customer_primary_contact")
+	else:
+		contact_name = frappe.db.get_value("Supplier", party_name, "primary_contact")
 	if contact_name:
 		phone = frappe.db.get_value("Contact", contact_name, "mobile_no") or frappe.db.get_value(
 			"Contact", contact_name, "phone"
@@ -220,9 +226,15 @@ def _get_contact_phone(customer_name: str) -> str:
 	return ""
 
 
-def _get_contact_email(customer_name: str) -> str:
-	"""Try to fetch email from primary contact."""
-	contact_name = frappe.db.get_value("Customer", customer_name, "customer_primary_contact")
+def _get_contact_email(party_name: str, doctype: str = "Customer") -> str:
+	"""Try to fetch email from primary contact.
+
+	Works for Customer and Supplier doctypes.
+	"""
+	if doctype == "Customer":
+		contact_name = frappe.db.get_value("Customer", party_name, "customer_primary_contact")
+	else:
+		contact_name = frappe.db.get_value("Supplier", party_name, "primary_contact")
 	if contact_name:
 		return frappe.db.get_value("Contact", contact_name, "email_id") or ""
 	return ""
@@ -370,10 +382,14 @@ def _build_legal_monetary_total(inv, tax_total) -> dict:
 
 
 def _build_payment_means(inv) -> list:
-	"""Build payment_means array from invoice payment terms template."""
+	"""Build payment_means array from the invoice's Payment Terms Template.
+
+	Reads custom_firs_payment_code directly from Payment Terms Template.
+	Defaults to "10" (Bank Transfer).
+	"""
 	code = "10"  # default bank transfer
 	if inv.get("payment_terms_template"):
-		mapped = frappe.db.get_value("FIRS Payment Means Code", {"payment_terms_template": inv.payment_terms_template}, "code")
+		mapped = frappe.db.get_value("Payment Terms Template", inv.payment_terms_template, "custom_firs_payment_code")
 		if mapped:
 			code = mapped
 	return [

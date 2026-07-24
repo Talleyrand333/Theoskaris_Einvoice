@@ -113,21 +113,13 @@
     {
         "doctype": "Custom Field",
         "dt": "Sales Invoice",
-        "fieldname": "custom_submit_to_nrs",
-        "label": "Submit to FIRS",
-        "fieldtype": "Check",
-        "insert_after": "custom_firs_tab",
-        "module": "Theoskaris Einvoice"
-    },
-    {
-        "doctype": "Custom Field",
-        "dt": "Sales Invoice",
         "fieldname": "custom_nrs_status",
         "label": "FIRS Status",
         "fieldtype": "Select",
-        "options": "Pending\nValid\nInvalid\nError\nTransmitted",
-        "insert_after": "custom_submit_to_nrs",
+        "options": "Pending\nValid\nInvalid\nError\nTransmitted\nSigned",
+        "insert_after": "custom_firs_tab",
         "read_only": 1,
+        "no_copy": 1,
         "module": "Theoskaris Einvoice"
     },
     {
@@ -138,6 +130,7 @@
         "fieldtype": "Data",
         "insert_after": "custom_nrs_status",
         "read_only": 1,
+        "no_copy": 1,
         "module": "Theoskaris Einvoice"
     },
     {
@@ -148,6 +141,7 @@
         "fieldtype": "Long Text",
         "insert_after": "custom_nrs_irn",
         "read_only": 1,
+        "no_copy": 1,
         "module": "Theoskaris Einvoice"
     },
     {
@@ -158,6 +152,7 @@
         "fieldtype": "Data",
         "insert_after": "custom_nrs_qr_code",
         "read_only": 1,
+        "no_copy": 1,
         "module": "Theoskaris Einvoice"
     },
     {
@@ -168,6 +163,7 @@
         "fieldtype": "Long Text",
         "insert_after": "custom_nrs_qr_code_url",
         "read_only": 1,
+        "no_copy": 1,
         "module": "Theoskaris Einvoice"
     },
     {
@@ -178,6 +174,18 @@
         "fieldtype": "Datetime",
         "insert_after": "custom_nrs_response",
         "read_only": 1,
+        "no_copy": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Sales Invoice",
+        "fieldname": "custom_firs_ready",
+        "label": "FIRS Ready",
+        "fieldtype": "Check",
+        "insert_after": "custom_nrs_datetime",
+        "read_only": 1,
+        "no_copy": 1,
         "module": "Theoskaris Einvoice"
     },
     {
@@ -218,7 +226,132 @@
     },
     {
         "doctype": "Custom Field",
+        "dt": "Supplier",
+        "fieldname": "custom_firs_tab",
+        "label": "FIRS E-Invoicing",
+        "fieldtype": "Tab Break",
+        "insert_after": "tax_id",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Supplier",
+        "fieldname": "custom_firs_tin",
+        "label": "FIRS TIN",
+        "fieldtype": "Data",
+        "insert_after": "custom_firs_tab",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
         "dt": "Sales Invoice Item",
+        "fieldname": "custom_firs_hsn_code",
+        "label": "FIRS HSN Code",
+        "fieldtype": "Data",
+        "insert_after": "description",
+        "no_copy": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_firs_tab",
+        "label": "FIRS E-Invoicing",
+        "fieldtype": "Tab Break",
+        "insert_after": "connections",
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_status",
+        "label": "FIRS Status",
+        "fieldtype": "Select",
+        "options": "\nPending\nValid\nInvalid\nError\nTransmitted\nSigned",
+        "insert_after": "custom_firs_tab",
+        "read_only": 1,
+        "no_copy": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_irn",
+        "label": "FIRS IRN",
+        "fieldtype": "Data",
+        "insert_after": "custom_nrs_status",
+        "read_only": 1,
+        "no_copy": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_qr_code",
+        "label": "FIRS QR Code",
+        "fieldtype": "Long Text",
+        "insert_after": "custom_nrs_irn",
+        "read_only": 1,
+        "no_copy": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_qr_code_url",
+        "label": "FIRS QR Code URL",
+        "fieldtype": "Data",
+        "insert_after": "custom_nrs_qr_code",
+        "read_only": 1,
+        "no_copy": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_response",
+        "label": "FIRS Response",
+        "fieldtype": "Long Text",
+        "insert_after": "custom_nrs_qr_code_url",
+        "read_only": 1,
+        "no_copy": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_nrs_datetime",
+        "label": "FIRS Date/Time",
+        "fieldtype": "Datetime",
+        "insert_after": "custom_nrs_response",
+        "read_only": 1,
+        "no_copy": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Purchase Invoice",
+        "fieldname": "custom_firs_ready",
+        "label": "FIRS Ready",
+        "fieldtype": "Check",
+        "insert_after": "custom_nrs_datetime",
+        "read_only": 1,
+        "no_copy": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Purchase Invoice Item",
+        "fieldname": "custom_firs_hsn_code",
+        "label": "FIRS HSN Code",
+        "fieldtype": "Data",
+        "insert_after": "description",
+        "no_copy": 1,
+        "module": "Theoskaris Einvoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Item",
         "fieldname": "custom_firs_hsn_code",
         "label": "FIRS HSN Code",
         "fieldtype": "Data",
@@ -226,74 +359,14 @@
         "module": "Theoskaris Einvoice"
     },
     {
-        "dt": "Purchase Invoice",
-        "fieldname": "custom_firs_tab",
-        "label": "FIRS E-Invoicing",
-        "fieldtype": "Section Break",
-        "insert_after": "connections_tab"
-    },
-    {
-        "dt": "Purchase Invoice",
-        "fieldname": "custom_submit_to_nrs",
-        "label": "Submit to NRS",
-        "fieldtype": "Check",
-        "insert_after": "custom_firs_tab",
-        "description": "Check to submit this purchase invoice to FIRS e-Invoicing system"
-    },
-    {
-        "dt": "Purchase Invoice",
-        "fieldname": "custom_nrs_status",
-        "label": "NRS Status",
+        "doctype": "Custom Field",
+        "dt": "Payment Terms Template",
+        "fieldname": "custom_firs_payment_code",
+        "label": "FIRS Payment Code",
         "fieldtype": "Select",
-        "options": "\nPending\nSubmitted\nTransmitted\nError",
-        "insert_after": "custom_submit_to_nrs",
-        "read_only": 1
-    },
-    {
-        "dt": "Purchase Invoice",
-        "fieldname": "custom_nrs_irn",
-        "label": "NRS IRN",
-        "fieldtype": "Data",
-        "insert_after": "custom_nrs_status",
-        "read_only": 1
-    },
-    {
-        "dt": "Purchase Invoice",
-        "fieldname": "custom_nrs_qr_code",
-        "label": "NRS QR Code",
-        "fieldtype": "Long Text",
-        "insert_after": "custom_nrs_irn",
-        "read_only": 1
-    },
-    {
-        "dt": "Purchase Invoice",
-        "fieldname": "custom_nrs_qr_code_url",
-        "label": "NRS QR Code URL",
-        "fieldtype": "Data",
-        "insert_after": "custom_nrs_qr_code",
-        "read_only": 1
-    },
-    {
-        "dt": "Purchase Invoice",
-        "fieldname": "custom_nrs_response",
-        "label": "NRS Response",
-        "fieldtype": "Long Text",
-        "insert_after": "custom_nrs_qr_code_url",
-        "read_only": 1
-    },
-    {
-        "dt": "Purchase Invoice",
-        "fieldname": "custom_nrs_datetime",
-        "label": "NRS DateTime",
-        "fieldtype": "Datetime",
-        "insert_after": "custom_nrs_response",
-        "read_only": 1
-    },
-    {
-        "dt": "Purchase Invoice Item",
-        "fieldname": "custom_firs_hsn_code",
-        "label": "FIRS HSN Code",
-        "fieldtype": "Data",
-        "insert_after": "description"
+        "options": "\n01\n03\n10\n30\n42\n49",
+        "description": "FIRS payment means code. 01=Cash, 03=Cheque, 10=Bank Transfer, 30=Card/POS, 42=Payment to bank account, 49=Direct debit",
+        "insert_after": "allocate_payment_based_on_payment_terms",
+        "module": "Theoskaris Einvoice"
     }
 ]

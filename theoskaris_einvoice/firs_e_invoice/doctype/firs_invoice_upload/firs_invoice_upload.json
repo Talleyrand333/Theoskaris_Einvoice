@@ -1,0 +1,119 @@
+{
+    "actions": [],
+    "allow_rename": 0,
+    "autoname": "FIRS-UPLOAD-.YYYY.-.#####",
+    "creation": "2026-07-24 00:00:00.000000",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "start_date",
+        "end_date",
+        "status",
+        "totals_section",
+        "total_invoices",
+        "column_break_1",
+        "queued_entries",
+        "failed_invoices",
+        "firs_queue_section",
+        "queue_entries"
+    ],
+    "fields": [
+        {
+            "fieldname": "start_date",
+            "fieldtype": "Date",
+            "in_list_view": 1,
+            "label": "Start Date",
+            "reqd": 1
+        },
+        {
+            "fieldname": "end_date",
+            "fieldtype": "Date",
+            "in_list_view": 1,
+            "label": "End Date",
+            "reqd": 1
+        },
+        {
+            "fieldname": "status",
+            "fieldtype": "Select",
+            "in_list_view": 1,
+            "label": "Status",
+            "options": "\nDraft\nFetched\nQueued\nProcessing\nCompleted\nPartial\nFailed",
+            "read_only": 1,
+            "default": "Draft"
+        },
+        {
+            "fieldname": "totals_section",
+            "fieldtype": "Section Break",
+            "label": "Summary"
+        },
+        {
+            "fieldname": "total_invoices",
+            "fieldtype": "Int",
+            "label": "Total Invoices Found",
+            "read_only": 1
+        },
+        {
+            "fieldname": "column_break_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "queued_entries",
+            "fieldtype": "Int",
+            "label": "Queued Entries",
+            "read_only": 1
+        },
+        {
+            "fieldname": "failed_invoices",
+            "fieldtype": "Int",
+            "label": "Failed Invoices",
+            "read_only": 1
+        },
+        {
+            "fieldname": "firs_queue_section",
+            "fieldtype": "Section Break",
+            "label": "Invoice Queue Entries"
+        },
+        {
+            "fieldname": "queue_entries",
+            "fieldtype": "Table",
+            "label": "Queue Entries",
+            "options": "FIRS Upload Queue Reference"
+        }
+    ],
+    "is_submittable": 1,
+    "modified": "2026-07-24 00:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "FIRS E-Invoice",
+    "name": "FIRS Invoice Upload",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1,
+            "submit": 1,
+            "cancel": 1,
+            "amend": 1
+        },
+        {
+            "read": 1,
+            "role": "Accounts User"
+        },
+        {
+            "read": 1,
+            "role": "Accounts Manager"
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 1,
+    "app": "theoskaris_einvoice"
+}

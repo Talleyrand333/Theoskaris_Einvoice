@@ -3,6 +3,8 @@
 import frappe
 from frappe import _
 
+from theoskaris_einvoice.utils.settings import is_firs_enabled_for
+
 
 class FIRSValidationError(Exception):
 	pass
@@ -25,8 +27,6 @@ def validate_sales_invoice(inv) -> list:
 	errors = []
 
 	company = frappe.get_doc("Company", inv.company)
-	if not company.get("custom_firs_enabled"):
-		errors.append(_("FIRS e-Invoicing is not enabled for company {0}").format(inv.company))
 
 	if not company.get("custom_firs_api_key"):
 		errors.append(_("Company FIRS API Key is missing"))
@@ -78,13 +78,13 @@ def validate_sales_invoice(inv) -> list:
 
 
 def can_transmit(inv) -> bool:
-	"""Return True if the invoice should be enqueued for FIRS transmission."""
+	"""Return True if the invoice should be enqueued for FIRS transmission.
+
+	Checks central FIRS Settings toggle — not the invoice or company flags.
+	"""
 	if inv.get("custom_nrs_irn"):
 		return False
-	if not inv.get("custom_submit_to_nrs"):
-		return False
-	company = frappe.get_doc("Company", inv.company)
-	return bool(company.get("custom_firs_enabled"))
+	return is_firs_enabled_for(inv.doctype)
 
 
 def assert_not_transmitted(inv):

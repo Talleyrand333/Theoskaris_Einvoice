@@ -1,10 +1,18 @@
-"""FIRS Settings helpers."""
+"""FIRS Settings helpers.
+
+Central control: only FIRS Settings doctype determines whether
+NRS upload is enabled for Sales Invoice or Purchase Invoice.
+"""
 
 import frappe
 
 
 def is_firs_enabled_for(doctype: str) -> bool:
-	"""Check if FIRS e-Invoicing is enabled for a given doctype."""
+	"""Check if FIRS e-Invoicing is enabled for a given doctype.
+
+	Reads the central toggle from FIRS Settings only — not from Company
+	or individual invoice flags.
+	"""
 	try:
 		settings = frappe.get_single("FIRS Settings")
 	except frappe.DoesNotExistError:
