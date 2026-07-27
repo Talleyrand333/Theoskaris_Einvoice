@@ -69,10 +69,8 @@ def _check_firs_ready(doc) -> bool:
 		if not item.get("custom_firs_hsn_code"):
 			return False
 
-	# Customer must have TIN
-	customer = frappe.get_doc("Customer", doc.customer)
-	if not customer.get("custom_firs_tin") and not customer.get("tax_id"):
-		return False
+	# Customer TIN is optional — B2C invoices (no TIN) are valid for FIRS upload.
+	# The payload builder classifies them as B2C with a placeholder TIN.
 
 	return True
 
