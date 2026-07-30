@@ -7,6 +7,8 @@ from frappe.utils import flt, get_datetime
 
 
 PLACEHOLDER_TIN = "00000000-0001"
+PLACEHOLDER_EMAIL = "noreply@theoskaris.com"
+PLACEHOLDER_PHONE = "+2340000000000"
 PLACEHOLDER_ADDRESS = {
 	"street_name": "1 Marina Road",
 	"city_name": "Lagos",
@@ -127,8 +129,8 @@ def _build_supplier_party(company) -> dict:
 	return {
 		"party_name": company.company_name,
 		"tin": str(tin).strip(),
-		"email": company.get("email") or "",
-		"telephone": _normalize_phone(company.get("phone_no")) or "",
+		"email": company.get("email") or PLACEHOLDER_EMAIL,
+		"telephone": _normalize_phone(company.get("phone_no")) or PLACEHOLDER_PHONE,
 		"business_description": company.get("custom_firs_business_description") or company.company_name,
 		"postal_address": address,
 	}
@@ -141,11 +143,13 @@ def _build_customer_party(customer) -> dict:
 	phone = _normalize_phone(customer.get("mobile_no"))
 	if not phone:
 		phone = _get_contact_phone(customer.name, "Customer")
+	if not phone:
+		phone = PLACEHOLDER_PHONE
 	return {
 		"party_name": customer.customer_name,
 		"tin": tin,
-		"email": customer.get("email_id") or _get_contact_email(customer.name, "Customer") or "",
-		"telephone": phone or "",
+		"email": customer.get("email_id") or _get_contact_email(customer.name, "Customer") or PLACEHOLDER_EMAIL,
+		"telephone": phone,
 		"business_description": customer.get("custom_firs_business_description") or customer.customer_name,
 		"postal_address": address,
 	}
@@ -158,11 +162,13 @@ def _build_supplier_from_supplier(supplier) -> dict:
 	phone = _normalize_phone(supplier.get("mobile_no"))
 	if not phone:
 		phone = _get_contact_phone(supplier.name, "Supplier")
+	if not phone:
+		phone = PLACEHOLDER_PHONE
 	return {
 		"party_name": supplier.supplier_name,
 		"tin": str(tin).strip(),
-		"email": supplier.get("email_id") or _get_contact_email(supplier.name, "Supplier") or "",
-		"telephone": phone or "",
+		"email": supplier.get("email_id") or _get_contact_email(supplier.name, "Supplier") or PLACEHOLDER_EMAIL,
+		"telephone": phone,
 		"business_description": supplier.supplier_name,
 		"postal_address": address,
 	}
@@ -175,8 +181,8 @@ def _build_customer_from_company(company) -> dict:
 	return {
 		"party_name": company.company_name,
 		"tin": str(tin).strip(),
-		"email": company.get("email") or "",
-		"telephone": _normalize_phone(company.get("phone_no")) or "",
+		"email": company.get("email") or PLACEHOLDER_EMAIL,
+		"telephone": _normalize_phone(company.get("phone_no")) or PLACEHOLDER_PHONE,
 		"business_description": company.company_name,
 		"postal_address": address,
 	}

@@ -102,14 +102,15 @@ class FIRSInvoiceUpload(Document):
 		)
 
 	# ------------------------------------------------------------------
-	# on_submit: queue each invoice individually
+	# on_submit: queue each invoice and trigger immediate processing
 	# ------------------------------------------------------------------
 	def on_submit(self):
-		"""Create a FIRS Queue entry for each invoice in the child table.
+		"""Create a FIRS Queue entry for each invoice and trigger immediate processing.
 
-		Each invoice gets exactly 1 FIRS Queue entry and 1 FIRS Log entry
-		when the queue processor runs. Uses db_set to update child rows
-		to avoid validate_update_after_submit errors.
+		Each invoice gets exactly 1 FIRS Queue entry. After queueing, each item
+		is immediately enqueued for background processing via frappe.enqueue.
+		The scheduled cron job (every 5 min) handles retries for any failed items.
+		Uses db_set to update child rows to avoid validate_update_after_submit errors.
 		"""
 		if not self.queue_entries:
 			frappe.throw("No invoices to upload. Use 'Fetch Invoices' first.")
@@ -119,6 +120,7 @@ class FIRSInvoiceUpload(Document):
 
 		queued = 0
 		failed = 0
+		queue_names = []
 
 		for row in self.queue_entries:
 			try:
@@ -132,6 +134,7 @@ class FIRSInvoiceUpload(Document):
 						update_modified=False,
 					)
 					queued += 1
+					queue_names.append(queue_name)
 				else:
 					frappe.db.set_value(
 						"FIRS Upload Queue Reference",
@@ -167,6 +170,21 @@ class FIRSInvoiceUpload(Document):
 		self.db_set("failed_invoices", failed)
 		self.db_set("status", new_status)
 		frappe.db.commit()
+
+		# Trigger immediate processing of each queued item
+		for qname in queue_names:
+			try:
+				frappe.enqueue(
+					method="theoskaris_einvoice.queue.processor.process_queue_item",
+					queue="short",
+					job_name=f"firs-process-{qname}",
+					queue_name=qname,
+				)
+			except Exception as e:
+				frappe.log_error(
+					title="FIRS Immediate Processing Enqueue Error",
+					message=f"Queue {qname}: {e}\n{frappe.get_traceback()}",
+				)
 
 	@staticmethod
 	def _create_queue_entry(doc_type: str, doc_name: str) -> str | None:
