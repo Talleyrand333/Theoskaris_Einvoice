@@ -39,7 +39,7 @@ class BaseFIRSClient(ABC):
 		url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
 		headers = self._get_auth_headers()
 		headers["Content-Type"] = "application/json"
-		data = json.dumps(payload) if payload is not None else None
+		data = json.dumps(payload, default=str) if payload is not None else None
 		resp = requests.request(
 			method, url, data=data, headers=headers, timeout=timeout, verify=self.verify_ssl
 		)

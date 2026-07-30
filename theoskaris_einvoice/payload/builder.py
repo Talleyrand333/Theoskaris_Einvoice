@@ -95,7 +95,7 @@ def build_payload(invoice: str | Any) -> dict:
 			payload["billing_reference"] = [
 				{
 					"irn": original_irn,
-					"issue_date": frappe.db.get_value(inv.doctype, inv.return_against, "posting_date"),
+					"issue_date": str(frappe.db.get_value(inv.doctype, inv.return_against, "posting_date")),
 				}
 			]
 
@@ -374,8 +374,12 @@ def _get_tax_base_for_row(tax_row, inv) -> float:
 
 
 def _build_legal_monetary_total(inv, tax_total) -> dict:
-	"""Build legal_monetary_total block."""
-	line_ext = flt(inv.net_total)
+	"""Build legal_monetary_total block.
+
+	Credit notes have negative totals in ERPNext, but FIRS requires
+	all monetary values to be >= 0. Use abs() for safety.
+	"""
+	line_ext = abs(flt(inv.net_total))
 	tax_amt = sum(flt(t["tax_amount"]) for t in tax_total)
 	tax_exclusive = line_ext
 	tax_inclusive = tax_exclusive + tax_amt

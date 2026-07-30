@@ -1,5 +1,12 @@
 {
-    "actions": [],
+    "actions": [
+    {
+        "label": "Retry",
+        "group": "Actions",
+        "action_type": "Server Action",
+        "action": "theoskaris_einvoice.firs_e_invoice.doctype.firs_queue.firs_queue.retry_queue_item"
+    }
+],
     "allow_rename": 0,
     "autoname": "FIRS-QUEUE-.YYYY.-.#####",
     "creation": "2026-07-03 10:00:00.000000",
