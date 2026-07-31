@@ -32,7 +32,7 @@ def recover_stuck_items():
 		"FIRS Queue",
 		filters={
 			"status": "Failed",
-			"next_retry_at": ["<="], now],
+			"next_retry_at": ["<=", now],
 			"retry_count": ["<", "max_retries"],
 		},
 		pluck="name",
