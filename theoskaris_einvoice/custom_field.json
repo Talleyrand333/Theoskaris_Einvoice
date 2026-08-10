@@ -6,7 +6,7 @@
         "label": "FIRS E-Invoicing",
         "fieldtype": "Tab Break",
         "insert_after": "default_currency",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -15,7 +15,7 @@
         "label": "Enable FIRS E-Invoicing",
         "fieldtype": "Check",
         "insert_after": "custom_firs_e_invoicing_tab",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -25,7 +25,7 @@
         "fieldtype": "Data",
         "insert_after": "custom_firs_enabled",
         "default": "https://eivc-k6z6d.ondigitalocean.app",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -35,7 +35,7 @@
         "fieldtype": "Data",
         "insert_after": "custom_firs_api_base_url",
         "default": "https://api.firsmbs.com",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -44,7 +44,7 @@
         "label": "FIRS API Key",
         "fieldtype": "Password",
         "insert_after": "custom_firs_report_base_url",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -53,7 +53,7 @@
         "label": "FIRS API Signature",
         "fieldtype": "Password",
         "insert_after": "custom_firs_api_key",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -62,7 +62,7 @@
         "label": "FIRS Business ID",
         "fieldtype": "Data",
         "insert_after": "custom_firs_api_signature",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -71,7 +71,7 @@
         "label": "FIRS Service ID",
         "fieldtype": "Data",
         "insert_after": "custom_firs_business_id",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -80,7 +80,7 @@
         "label": "FIRS Company TIN",
         "fieldtype": "Data",
         "insert_after": "custom_firs_service_id",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -89,7 +89,7 @@
         "label": "FIRS Digital Certificate",
         "fieldtype": "Attach",
         "insert_after": "custom_firs_company_tin",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -99,7 +99,7 @@
         "fieldtype": "Check",
         "insert_after": "custom_firs_certificate",
         "default": "1",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -108,7 +108,7 @@
         "label": "FIRS E-Invoicing",
         "fieldtype": "Tab Break",
         "insert_after": "more_info",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -120,7 +120,7 @@
         "insert_after": "custom_firs_tab",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -131,7 +131,7 @@
         "insert_after": "custom_nrs_status",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -142,7 +142,7 @@
         "insert_after": "custom_nrs_irn",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -153,7 +153,7 @@
         "insert_after": "custom_nrs_qr_code",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -164,7 +164,7 @@
         "insert_after": "custom_nrs_qr_code_url",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -175,7 +175,7 @@
         "insert_after": "custom_nrs_response",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -186,7 +186,7 @@
         "insert_after": "custom_nrs_datetime",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -195,7 +195,7 @@
         "label": "FIRS E-Invoicing",
         "fieldtype": "Tab Break",
         "insert_after": "tax_id",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -204,7 +204,7 @@
         "label": "FIRS TIN",
         "fieldtype": "Data",
         "insert_after": "custom_firs_tab",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -213,7 +213,7 @@
         "label": "FIRS Customer ID",
         "fieldtype": "Data",
         "insert_after": "custom_firs_tin",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -222,7 +222,7 @@
         "label": "FIRS Business Description",
         "fieldtype": "Data",
         "insert_after": "custom_firs_customer_id",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -231,7 +231,7 @@
         "label": "FIRS E-Invoicing",
         "fieldtype": "Tab Break",
         "insert_after": "tax_id",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -240,7 +240,7 @@
         "label": "FIRS TIN",
         "fieldtype": "Data",
         "insert_after": "custom_firs_tab",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -250,7 +250,7 @@
         "fieldtype": "Data",
         "insert_after": "description",
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -259,7 +259,7 @@
         "label": "FIRS E-Invoicing",
         "fieldtype": "Tab Break",
         "insert_after": "connections",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -271,7 +271,7 @@
         "insert_after": "custom_firs_tab",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -282,7 +282,7 @@
         "insert_after": "custom_nrs_status",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -293,7 +293,7 @@
         "insert_after": "custom_nrs_irn",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -304,7 +304,7 @@
         "insert_after": "custom_nrs_qr_code",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -315,7 +315,7 @@
         "insert_after": "custom_nrs_qr_code_url",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -326,7 +326,7 @@
         "insert_after": "custom_nrs_response",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -337,7 +337,7 @@
         "insert_after": "custom_nrs_datetime",
         "read_only": 1,
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -347,7 +347,7 @@
         "fieldtype": "Data",
         "insert_after": "description",
         "no_copy": 1,
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -356,7 +356,7 @@
         "label": "FIRS HSN Code",
         "fieldtype": "Data",
         "insert_after": "description",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     },
     {
         "doctype": "Custom Field",
@@ -367,6 +367,6 @@
         "options": "\n01\n03\n10\n30\n42\n49",
         "description": "FIRS payment means code. 01=Cash, 03=Cheque, 10=Bank Transfer, 30=Card/POS, 42=Payment to bank account, 49=Direct debit",
         "insert_after": "allocate_payment_based_on_payment_terms",
-        "module": "Theoskaris Einvoice"
+        "module": "FIRS E-Invoice"
     }
 ]

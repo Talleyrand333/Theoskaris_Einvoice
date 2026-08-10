@@ -9,11 +9,50 @@ from theoskaris_einvoice.api.client_base import FIRSAPIError, get_firs_client
 from theoskaris_einvoice.firs_e_invoice.doctype.firs_log.firs_log import log_request
 from theoskaris_einvoice.payload.builder import build_payload
 
+TRANSMIT_DENIED_STATUS_CODES = (401, 403)
+
+
+def _transmit_enabled() -> bool:
+	"""Read the transmit toggle from FIRS Settings (default: off)."""
+	try:
+		return bool(frappe.get_single("FIRS Settings").get("enable_transmit", 0))
+	except frappe.DoesNotExistError:
+		return False
+
+
+def _make_stage(stage, status, ms=0, code="", error=""):
+	return {
+		"stage": stage,
+		"status": status,
+		"response_status_code": str(code) if code else "",
+		"processing_time": ms,
+		"error_message": error,
+	}
+
 
 def process_queue_item(queue_name: str):
-	"""Process one FIRS Queue item end-to-end."""
+	"""Process one FIRS Queue item end-to-end, logging one FIRS Log per run."""
 	queue = frappe.get_doc("FIRS Queue", queue_name)
 	queue.mark_processing()
+
+	stages = []
+
+	def log_run(status, response_data, error_message=None, irn=None, total_ms=0):
+		return log_request(
+			document_type=queue.document_type,
+			document_name=queue.document_name,
+			request_payload=payload_json,
+			response_data=response_data,
+			status=status,
+			response_status_code="",
+			retry_attempt=queue.retry_count,
+			irn=irn,
+			processing_time=total_ms,
+			api_version="v1",
+			error_message=error_message,
+			queue_name=queue.name,
+			stages=stages,
+		)
 
 	try:
 		inv = frappe.get_doc(queue.document_type, queue.document_name)
@@ -27,26 +66,19 @@ def process_queue_item(queue_name: str):
 		try:
 			resp_validate = client.validate_invoice(payload)
 		except FIRSAPIError as e:
-			log_request(
-				document_type=queue.document_type,
-				document_name=queue.document_name,
-				request_payload=payload_json,
-				response_data=json.dumps(e.response_body, default=str) if e.response_body else str(e),
-				status="Invalid" if e.status_code and e.status_code < 500 else "Error",
-				response_status_code=str(e.status_code) if e.status_code else "",
-				retry_attempt=queue.retry_count,
-				processing_time=round(time.time() * 1000 - start, 2),
-				api_version="v1",
-				error_message=str(e),
-			)
+			validate_ms = round(time.time() * 1000 - start, 2)
+			status = "Invalid" if e.status_code and e.status_code < 500 else "Error"
+			stages.append(_make_stage("Validate", status, validate_ms, e.status_code, str(e)))
+			log_run(status, json.dumps(e.response_body, default=str) if e.response_body else str(e), error_message=str(e), total_ms=validate_ms)
 			if client.is_retryable(e):
 				queue.mark_failed(e)
 			else:
 				queue.mark_failed(e, increment_retry=False)
 			_set_invoice_status(inv, "Error", error=str(e))
-			raise
+			return
 
 		validate_ms = round(time.time() * 1000 - start, 2)
+		stages.append(_make_stage("Validate", "Success", validate_ms))
 		irn = _extract_irn(resp_validate) or payload.get("irn")
 
 		# Step 2: sign the validated invoice
@@ -54,58 +86,50 @@ def process_queue_item(queue_name: str):
 		try:
 			resp_sign = client.sign_invoice(payload)
 		except FIRSAPIError as e:
-			log_request(
-				document_type=queue.document_type,
-				document_name=queue.document_name,
-				request_payload=payload_json,
-				response_data=json.dumps(e.response_body, default=str) if e.response_body else str(e),
-				status="Error" if e.status_code and e.status_code >= 500 else "Invalid",
-				response_status_code=str(e.status_code) if e.status_code else "",
-				retry_attempt=queue.retry_count,
-				processing_time=round(time.time() * 1000 - start, 2),
-				api_version="v1",
-				error_message=str(e),
-			)
+			sign_ms = round(time.time() * 1000 - start, 2)
+			status = "Error" if e.status_code and e.status_code >= 500 else "Invalid"
+			stages.append(_make_stage("Sign", status, sign_ms, e.status_code, str(e)))
+			log_run(status, json.dumps(e.response_body, default=str) if e.response_body else str(e), error_message=str(e), irn=irn, total_ms=validate_ms + sign_ms)
 			if client.is_retryable(e):
 				queue.mark_failed(e)
 			else:
 				queue.mark_failed(e, increment_retry=False)
 			_set_invoice_status(inv, "Error", error=str(e))
-			raise
+			return
 
 		sign_ms = round(time.time() * 1000 - start, 2)
+		stages.append(_make_stage("Sign", "Success", sign_ms))
 
-		# Step 3: transmit by IRN (optional — skip if API key lacks transmit permission)
-		start = time.time() * 1000
-		try:
-			resp_transmit = client.transmit_invoice(irn)
-			transmit_ms = round(time.time() * 1000 - start, 2)
-		except FIRSAPIError as e:
-			# Log but don't fail — sign already creates the invoice in eTranzact
-			log_request(
-				document_type=queue.document_type,
-				document_name=queue.document_name,
-				request_payload=json.dumps({"irn": irn}),
-				response_data=json.dumps(e.response_body, default=str) if e.response_body else str(e),
-				status="Error",
-				response_status_code=str(e.status_code) if e.status_code else "",
-				retry_attempt=queue.retry_count,
-				processing_time=round(time.time() * 1000 - start, 2),
-				api_version="v1",
-				error_message=str(e),
-			)
-			resp_transmit = None
-			transmit_ms = 0
+		# Step 3: transmit by IRN — only if enabled in FIRS Settings
+		transmit_ms = 0
+		resp_transmit = None
+		if _transmit_enabled():
+			start = time.time() * 1000
+			try:
+				resp_transmit = client.transmit_invoice(irn)
+				transmit_ms = round(time.time() * 1000 - start, 2)
+				stages.append(_make_stage("Transmit", "Success", transmit_ms))
+			except FIRSAPIError as e:
+				transmit_ms = round(time.time() * 1000 - start, 2)
+				if e.status_code in TRANSMIT_DENIED_STATUS_CODES:
+					# API key lacks transmit permission — record as Skipped, not Error
+					stages.append(_make_stage("Transmit", "Skipped", transmit_ms, e.status_code, str(e)))
+				else:
+					stages.append(_make_stage("Transmit", "Error", transmit_ms, e.status_code, str(e)))
+		else:
+			stages.append(_make_stage("Transmit", "Skipped", 0, "", "Transmit disabled in FIRS Settings"))
 
 		# Step 4: confirm the transmitted invoice
 		start = time.time() * 1000
 		try:
 			resp_confirm = client.confirm_invoice(irn)
-		except FIRSAPIError:
+			confirm_ms = round(time.time() * 1000 - start, 2)
+			stages.append(_make_stage("Confirm", "Success", confirm_ms))
+		except FIRSAPIError as e:
+			confirm_ms = round(time.time() * 1000 - start, 2)
 			# Confirm is optional — log but don't fail
+			stages.append(_make_stage("Confirm", "Error", confirm_ms, e.status_code, str(e)))
 			resp_confirm = None
-
-		confirm_ms = round(time.time() * 1000 - start, 2) if resp_confirm else 0
 
 		# Persist IRN + response back to invoice
 		qr_code = _extract_qr_code(resp_validate) or (_extract_qr_code(resp_transmit) if resp_transmit else None) or (_extract_qr_code(resp_confirm) if resp_confirm else None)
@@ -123,19 +147,9 @@ def process_queue_item(queue_name: str):
 			response=_response,
 		)
 
-		# Log success
-		log_request(
-			document_type=queue.document_type,
-			document_name=queue.document_name,
-			request_payload=payload_json,
-			response_data=json.dumps(_response, default=str),
-			status="Success",
-			response_status_code="200",
-			retry_attempt=queue.retry_count,
-			irn=irn,
-			processing_time=validate_ms + sign_ms + transmit_ms + confirm_ms,
-			api_version="v1",
-		)
+		# One success log per run, with all stages in the child table
+		total_ms = validate_ms + sign_ms + transmit_ms + confirm_ms
+		log_run("Success", json.dumps(_response, default=str), irn=irn, total_ms=total_ms)
 
 		queue.mark_completed(response=json.dumps(_response, default=str))
 

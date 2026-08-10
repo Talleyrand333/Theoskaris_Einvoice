@@ -58,7 +58,7 @@ def create_firs_custom_fields():
 			"label": cf["label"],
 			"fieldtype": cf["fieldtype"],
 			"insert_after": cf.get("insert_after"),
-			"module": "Theoskaris Einvoice",
+			"module": "FIRS E-Invoice",
 		}
 
 		# Optional fields

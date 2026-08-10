@@ -8,12 +8,15 @@
     "field_order": [
         "document_type",
         "document_name",
+        "queue",
         "api_version",
         "status",
         "response_status_code",
         "retry_attempt",
         "irn",
         "processing_time",
+        "stages_section",
+        "stages",
         "request_payload",
         "response_data",
         "error_message"
@@ -32,6 +35,13 @@
             "in_list_view": 1,
             "label": "Document Name",
             "options": "document_type"
+        },
+        {
+            "fieldname": "queue",
+            "fieldtype": "Link",
+            "in_list_view": 1,
+            "label": "Queue",
+            "options": "FIRS Queue"
         },
         {
             "fieldname": "api_version",
@@ -65,6 +75,17 @@
             "fieldname": "processing_time",
             "fieldtype": "Float",
             "label": "Processing Time (ms)"
+        },
+        {
+            "fieldname": "stages_section",
+            "fieldtype": "Section Break",
+            "label": "Stages"
+        },
+        {
+            "fieldname": "stages",
+            "fieldtype": "Table",
+            "label": "Stages",
+            "options": "FIRS Log Stage"
         },
         {
             "fieldname": "request_payload",

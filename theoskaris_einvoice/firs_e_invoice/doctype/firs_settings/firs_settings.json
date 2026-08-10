@@ -9,7 +9,9 @@
     "engine": "InnoDB",
     "field_order": [
         "enable_sales_invoice",
-        "enable_purchase_invoice"
+        "enable_purchase_invoice",
+        "enable_transmit",
+        "transmit_note"
     ],
     "fields": [
         {
@@ -23,6 +25,20 @@
             "fieldtype": "Check",
             "label": "Enable for Purchase Invoice",
             "default": "0"
+        },
+        {
+            "fieldname": "enable_transmit",
+            "fieldtype": "Check",
+            "label": "Enable Transmit Step",
+            "description": "Call POST /transmit/{irn} after signing. Disable if your API key lacks transmit permission (403 Access Denied).",
+            "default": "0"
+        },
+        {
+            "fieldname": "transmit_note",
+            "fieldtype": "Small Text",
+            "label": "Transmit Note",
+            "read_only": 1,
+            "description": "If disabled, the Transmit stage is recorded as Skipped and the invoice is marked Signed (already created in eTranzact)."
         }
     ],
     "issingle": 1,
