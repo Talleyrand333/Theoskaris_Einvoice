@@ -153,7 +153,19 @@ def process_queue_item(queue_name: str):
 			resp_confirm = None
 
 		# Persist IRN + response back to invoice
-		qr_code = _extract_qr_code(resp_validate) or (_extract_qr_code(resp_transmit) if resp_transmit else None) or (_extract_qr_code(resp_confirm) if resp_confirm else None)
+		# QR code: generated per NRS IRN Signing spec (RSA-encrypt irn+certificate,
+		# render locally) — the API never returns a QR.
+		qr_code = None
+		qr_data_uri = None
+		if irn:
+			try:
+				from theoskaris_einvoice.utils.qr_generator import generate_invoice_qr
+				qr_code, qr_data_uri = generate_invoice_qr(inv, irn)
+			except Exception as e:
+				frappe.log_error(
+					title="FIRS QR Generation Failed",
+					message=f"IRN: {irn}, Error: {e}\n{frappe.get_traceback()}",
+				)
 		_response = {
 			"validate_response": resp_validate,
 			"sign_response": resp_sign,
@@ -165,6 +177,7 @@ def process_queue_item(queue_name: str):
 			status="Transmitted" if resp_transmit else "Signed",
 			irn=irn,
 			qr_code=qr_code,
+			qr_data_uri=qr_data_uri,
 			response=_response,
 		)
 
@@ -193,24 +206,14 @@ def _extract_irn(response) -> str | None:
 	return None
 
 
-def _extract_qr_code(response) -> str | None:
-	if not response:
-		return None
-	for key in ("qr_code", "qrCode", "qr", "data"):
-		val = response.get(key)
-		if val and isinstance(val, str):
-			return val
-		if val and isinstance(val, dict):
-			return val.get("qr_code") or val.get("qrCode")
-	return None
-
-
-def _set_invoice_status(inv, status, irn=None, qr_code=None, response=None, error=None):
+def _set_invoice_status(inv, status, irn=None, qr_code=None, response=None, error=None, qr_data_uri=None):
 	inv.db_set("custom_nrs_status", status)
 	if irn:
 		inv.db_set("custom_nrs_irn", irn)
 	if qr_code:
 		inv.db_set("custom_nrs_qr_code", qr_code)
+	if qr_data_uri:
+		inv.db_set("custom_nrs_qr_code_url", qr_data_uri)
 	if response:
 		inv.db_set("custom_nrs_response", json.dumps(response, default=str))
 	if error:
