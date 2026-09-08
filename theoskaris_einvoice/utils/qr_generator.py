@@ -59,11 +59,21 @@ def generate_qr_payload(irn: str, certificate: str, public_key_b64: str) -> str:
 
 def generate_qr_data_uri(qr_payload: str) -> str:
 	"""Render the encrypted payload as a PNG data URI (for print formats)."""
+	# box_size 10 + border 4 gives a large, high-contrast QR that survives
+	# print/PDF rendering and scans reliably from paper and screen.
 	import io
 
 	import qrcode
 
-	img = qrcode.make(qr_payload, box_size=6)
+	qr = qrcode.QRCode(
+		version=None,
+		error_correction=qrcode.constants.ERROR_CORRECT_M,
+		box_size=10,
+		border=4,
+	)
+	qr.add_data(qr_payload)
+	qr.make(fit=True)
+	img = qr.make_image(fill_color="black", back_color="white")
 	buf = io.BytesIO()
 	img.save(buf, format="PNG")
 	b64 = base64.b64encode(buf.getvalue()).decode()
