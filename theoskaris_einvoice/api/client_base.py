@@ -171,7 +171,17 @@ class EtranzactClient(BaseFIRSClient):
 
 
 def get_firs_client(company_name: str) -> BaseFIRSClient:
-	"""Factory: return the configured FIRS client for a company."""
+	"""Factory: return the configured FIRS client for a company.
+
+	Version selection via Company field custom_firs_api_version:
+	- "v3" (or unset/unknown): eTranzact v3 APP client (HMAC-SHA256 auth,
+	  /api/v3 endpoints, documented sandbox firseinvoicedemo.etranzactng.com)
+	- "v1": legacy eTranzact v1 client (x-api-secret header, /api/v1 endpoints)
+	"""
 	company = frappe.get_doc("Company", company_name)
-	# Currently only eTranzact is supported.
-	return EtranzactClient(company)
+	version = (company.get("custom_firs_api_version") or "v3").strip().lower()
+	if version == "v1":
+		return EtranzactClient(company)
+	from theoskaris_einvoice.api.client_v3 import EtranzactV3Client
+
+	return EtranzactV3Client(company)

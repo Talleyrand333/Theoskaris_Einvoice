@@ -30,6 +30,18 @@
     {
         "doctype": "Custom Field",
         "dt": "Company",
+        "fieldname": "custom_firs_api_version",
+        "label": "FIRS API Version",
+        "fieldtype": "Select",
+        "options": "\nv3\nv1",
+        "default": "v3",
+        "insert_after": "custom_firs_api_base_url",
+        "description": "eTranzact API version: v3 (HMAC-SHA256, /api/v3) or v1 (legacy)",
+        "module": "FIRS E-Invoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Company",
         "fieldname": "custom_firs_report_base_url",
         "label": "FIRS Report Base URL",
         "fieldtype": "Data",
