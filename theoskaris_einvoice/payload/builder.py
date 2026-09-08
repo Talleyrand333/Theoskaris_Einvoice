@@ -246,6 +246,66 @@ def _get_contact_email(party_name: str, doctype: str = "Customer") -> str:
 	return ""
 
 
+# UN/ECE Rec 20 unit-of-measure codes required by FIRS price_unit (max 3 chars).
+# FIRS/eTranzact expects codes from its "invoice quantity code list" — in practice
+# C62 ("one/unit") is the safe default; mapped codes used where a direct match exists.
+_UOM_CODE_MAP = {
+	"PCS": "C62",
+	"PCE": "C62",
+	"PIECE": "C62",
+	"PIECES": "C62",
+	"NOS": "C62",
+	"NUMBERS": "C62",
+	"UNIT": "C62",
+	"EA": "C62",
+	"EACH": "C62",
+	"QTY": "C62",
+	"LUMP SUM": "C62",
+	"DAY RATE": "HUR",
+	"DRUM(S)": "C62",
+	"METER(S)": "MTR",
+	"MONTH(S)": "MON",
+	"KG": "KGM",
+	"GRAM": "GRM",
+	"GRAMS": "GRM",
+	"LITRE": "LTR",
+	"LITRES": "LTR",
+	"LITER": "LTR",
+	"LITERS": "LTR",
+	"METER": "MTR",
+	"METERS": "MTR",
+	"METRE": "MTR",
+	"METRES": "MTR",
+	"FOOT": "FOT",
+	"FEET": "FOT",
+	"BOX": "C62",
+	"PACK": "C62",
+	"SET": "C62",
+	"HOUR": "HUR",
+	"HOURS": "HUR",
+	"DAY": "DAY",
+	"DAYS": "DAY",
+	"MONTH": "MON",
+	"MONTHS": "MON",
+}
+
+
+def _price_unit_code(uom: str) -> str:
+	"""Convert a Frappe UOM name to a FIRS invoice quantity code.
+
+	C62 = "one/unit" — accepted by FIRS for any count-based line and the
+	fallback when the UOM has no direct code. Codes: KGM/LTR/MTR/HUR/DAY/MON
+	for the physical/time units FIRS accepts.
+	"""
+	u = (uom or "").strip().upper()
+	code = _UOM_CODE_MAP.get(u)
+	if code:
+		return code
+	if len(u) <= 3 and u.isalpha():
+		return u
+	return "C62"
+
+
 def _format_hsn(hsn: str) -> str:
 	"""Ensure HSN code has 2 decimal places (format: 0000.00)."""
 	hsn = str(hsn).strip()
@@ -294,7 +354,7 @@ def _build_invoice_lines(inv) -> list:
 				"price": {
 					"price_amount": net_rate,
 					"base_quantity": 1,
-					"price_unit": f"{inv.currency} per {item.uom}",
+					"price_unit": _price_unit_code(item.uom),
 				},
 				"hsn_code": _format_hsn(item.get("custom_firs_hsn_code") or "0000.00"),
 				"product_category": item.get("item_group") or "General",

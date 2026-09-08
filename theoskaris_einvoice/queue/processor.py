@@ -54,6 +54,27 @@ def process_queue_item(queue_name: str):
 			stages=stages,
 		)
 
+	def safe_log_run(status, response_data, **kwargs):
+		"""Log a run; never let a logging failure destroy the API response.
+
+		On logging failure, persist the response directly on the queue row so
+		the real API error is always visible.
+		"""
+		try:
+			return log_run(status, response_data, **kwargs)
+		except Exception:
+			frappe.db.set_value(
+				"FIRS Queue",
+				queue.name,
+				{
+					"last_response": response_data,
+					"last_error": kwargs.get("error_message") or "FIRS Log insert failed",
+				},
+				update_modified=False,
+			)
+			frappe.db.commit()
+			frappe.log_error(title="FIRS Log Write Failed", message=frappe.get_traceback())
+
 	try:
 		inv = frappe.get_doc(queue.document_type, queue.document_name)
 		client = get_firs_client(inv.company)
@@ -69,7 +90,7 @@ def process_queue_item(queue_name: str):
 			validate_ms = round(time.time() * 1000 - start, 2)
 			status = "Invalid" if e.status_code and e.status_code < 500 else "Error"
 			stages.append(_make_stage("Validate", status, validate_ms, e.status_code, str(e)))
-			log_run(status, json.dumps(e.response_body, default=str) if e.response_body else str(e), error_message=str(e), total_ms=validate_ms)
+			safe_log_run(status, json.dumps(e.response_body, default=str) if e.response_body else str(e), error_message=str(e), total_ms=validate_ms)
 			if client.is_retryable(e):
 				queue.mark_failed(e)
 			else:
@@ -89,7 +110,7 @@ def process_queue_item(queue_name: str):
 			sign_ms = round(time.time() * 1000 - start, 2)
 			status = "Error" if e.status_code and e.status_code >= 500 else "Invalid"
 			stages.append(_make_stage("Sign", status, sign_ms, e.status_code, str(e)))
-			log_run(status, json.dumps(e.response_body, default=str) if e.response_body else str(e), error_message=str(e), irn=irn, total_ms=validate_ms + sign_ms)
+			safe_log_run(status, json.dumps(e.response_body, default=str) if e.response_body else str(e), error_message=str(e), irn=irn, total_ms=validate_ms + sign_ms)
 			if client.is_retryable(e):
 				queue.mark_failed(e)
 			else:
@@ -149,7 +170,7 @@ def process_queue_item(queue_name: str):
 
 		# One success log per run, with all stages in the child table
 		total_ms = validate_ms + sign_ms + transmit_ms + confirm_ms
-		log_run("Success", json.dumps(_response, default=str), irn=irn, total_ms=total_ms)
+		safe_log_run("Success", json.dumps(_response, default=str), irn=irn, total_ms=total_ms)
 
 		queue.mark_completed(response=json.dumps(_response, default=str))
 
