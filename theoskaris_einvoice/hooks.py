@@ -58,4 +58,6 @@ scheduler_events = {
 after_install = "theoskaris_einvoice.install.after_install"
 after_migrate = "theoskaris_einvoice.install.create_firs_custom_fields"
 
-fixtures = []
+fixtures = [
+	{"dt": "Print Format", "filters": [["name", "in", ["NRS Tax Invoice"]]]},
+]
