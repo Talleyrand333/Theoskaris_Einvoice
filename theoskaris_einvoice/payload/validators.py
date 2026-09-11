@@ -18,8 +18,8 @@ def _get_counterparty(inv):
 
 
 def _get_tin(counterparty) -> str:
-	"""Get TIN from a Customer or Supplier."""
-	return counterparty.get("custom_firs_tin") or counterparty.get("tax_id") or ""
+	"""Get TIN from a Customer or Supplier (standard Tax ID field)."""
+	return counterparty.get("tax_id") or ""
 
 
 def get_counterparty_tin(inv) -> str:

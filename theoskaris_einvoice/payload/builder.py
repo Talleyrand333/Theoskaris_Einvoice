@@ -103,20 +103,16 @@ def build_payload(invoice: str | Any) -> dict:
 
 
 def _get_invoice_kind(customer) -> str:
-	"""Return B2B if customer has TIN, otherwise B2C."""
+	"""Return B2B if customer has a TIN (standard Tax ID), otherwise B2C."""
 	tin = _get_tin(customer)
 	if tin and tin != PLACEHOLDER_TIN:
-		return "B2B"
-	# If customer has a tax_id set on the Customer record, treat as B2B
-	customer_tax_id = (customer.get("tax_id") or "").strip()
-	if customer_tax_id:
 		return "B2B"
 	return "B2C"
 
 
 def _get_tin(customer) -> str:
-	"""Get customer TIN, falling back to placeholder."""
-	tin = customer.get("custom_firs_tin") or customer.get("tax_id")
+	"""Get customer TIN from the standard Tax ID field, falling back to placeholder."""
+	tin = customer.get("tax_id")
 	if tin:
 		return str(tin).strip()
 	return PLACEHOLDER_TIN

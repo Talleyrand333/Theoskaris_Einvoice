@@ -221,19 +221,10 @@
     {
         "doctype": "Custom Field",
         "dt": "Customer",
-        "fieldname": "custom_firs_tin",
-        "label": "FIRS TIN",
-        "fieldtype": "Data",
-        "insert_after": "custom_firs_tab",
-        "module": "FIRS E-Invoice"
-    },
-    {
-        "doctype": "Custom Field",
-        "dt": "Customer",
         "fieldname": "custom_firs_customer_id",
         "label": "FIRS Customer ID",
         "fieldtype": "Data",
-        "insert_after": "custom_firs_tin",
+        "insert_after": "custom_firs_tab",
         "module": "FIRS E-Invoice"
     },
     {
@@ -252,15 +243,6 @@
         "label": "FIRS E-Invoicing",
         "fieldtype": "Tab Break",
         "insert_after": "tax_id",
-        "module": "FIRS E-Invoice"
-    },
-    {
-        "doctype": "Custom Field",
-        "dt": "Supplier",
-        "fieldname": "custom_firs_tin",
-        "label": "FIRS TIN",
-        "fieldtype": "Data",
-        "insert_after": "custom_firs_tab",
         "module": "FIRS E-Invoice"
     },
     {
