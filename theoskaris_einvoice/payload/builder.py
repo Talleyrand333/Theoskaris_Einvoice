@@ -18,6 +18,47 @@ PLACEHOLDER_ADDRESS = {
 	"country": "NG",
 }
 
+# The API validates country against ISO 3166-1 alpha-2 codes (see its
+# Get Country Codes resource). ERPNext Address.country holds names
+# ("Nigeria"), and users type free text, so normalize before sending.
+_COUNTRY_TO_ISO2 = {
+	"nigeria": "NG",
+	"ghana": "GH",
+	"united kingdom": "GB",
+	"united states": "US",
+	"united states of america": "US",
+	"usa": "US",
+	"canada": "CA",
+	"south africa": "ZA",
+	"kenya": "KE",
+	"togo": "TG",
+	"benin": "BJ",
+	"cote divoire": "CI",
+	"côte d'ivoire": "CI",
+	"ivory coast": "CI",
+	"cameroon": "CM",
+	"niger": "NE",
+	"egypt": "EG",
+}
+
+
+def _country_to_iso2(country: str) -> str:
+	"""Normalize an ERPNext country name/value to ISO alpha-2.
+
+	Falls back to the ERPNext Country doctype code, then to NG.
+	"""
+	if not country:
+		return "NG"
+	val = str(country).strip()
+	if len(val) == 2:
+		return val.upper()
+	code = _COUNTRY_TO_ISO2.get(val.lower())
+	if not code:
+		code = frappe.db.get_value("Country", {"name": ["like", val]}, "code")
+		if code:
+			code = code.upper()
+	return code or "NG"
+
 
 def build_payload(invoice: str | Any) -> dict:
 	"""Build the eTranzact ValidateInvoiceRequest payload for Sales or Purchase Invoice."""
@@ -205,9 +246,9 @@ def _get_address(link_name, link_doctype) -> dict | None:
 		),
 		"city_name": addr.get("city") or "",
 		"lga": addr.get("county") or addr.get("city") or "",
-		"state": addr.get("state") or "",
+		"state": (addr.get("state") or "").title(),
 		"postal_zone": addr.get("pincode") or "",
-		"country": addr.get("country") or "NG",
+		"country": _country_to_iso2(addr.get("country")),
 	}
 
 
