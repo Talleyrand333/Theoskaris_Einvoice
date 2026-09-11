@@ -30,6 +30,43 @@ def get_counterparty_tin(inv) -> str:
 		return ""
 
 
+def _get_contact(inv, counterparty):
+	"""Primary Contact linked to the Customer/Supplier, or None."""
+	dt = counterparty.doctype
+	contact_name = counterparty.get("customer_primary_contact" if dt == "Customer" else "primary_contact")
+	if contact_name:
+		return frappe.get_cached_doc("Contact", contact_name)
+	return None
+
+
+def get_counterparty_email(inv) -> str:
+	"""Counterparty email: own email_id, falling back to the primary Contact."""
+	try:
+		counterparty = _get_counterparty(inv)
+		email = (counterparty.get("email_id") or "").strip()
+		if not email:
+			contact = _get_contact(inv, counterparty)
+			if contact:
+				email = (contact.get("email_id") or "").strip()
+		return email
+	except Exception:
+		return ""
+
+
+def get_counterparty_phone(inv) -> str:
+	"""Counterparty phone: own mobile_no, falling back to the primary Contact."""
+	try:
+		counterparty = _get_counterparty(inv)
+		phone = (counterparty.get("mobile_no") or "").strip()
+		if not phone:
+			contact = _get_contact(inv, counterparty)
+			if contact:
+				phone = (contact.get("mobile_no") or contact.get("phone") or "").strip()
+		return phone
+	except Exception:
+		return ""
+
+
 def validate_sales_invoice(inv) -> list:
 	"""Run hard validation before submitting a Sales/Purchase Invoice to FIRS."""
 	errors = []

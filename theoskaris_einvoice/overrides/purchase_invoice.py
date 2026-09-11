@@ -9,6 +9,8 @@ import frappe
 from theoskaris_einvoice.payload.validators import (
 	FIRSValidationError,
 	assert_not_transmitted,
+	get_counterparty_email,
+	get_counterparty_phone,
 	get_counterparty_tin,
 	validate_sales_invoice,
 )
@@ -35,7 +37,25 @@ def validate(doc, method=None):
 	if not get_counterparty_tin(doc):
 		frappe.msgprint(
 			f"FIRS TIN is missing for Supplier {doc.supplier}. "
-			f"Set the FIRS TIN on the Supplier record to make this invoice FIRS Ready.",
+			f"Set the Tax ID on the Supplier record to make this invoice FIRS Ready.",
+			title="FIRS Validation",
+			indicator="orange",
+			alert=True,
+		)
+
+	# Warn when the Supplier email or phone is missing — they block FIRS upload
+	if not get_counterparty_email(doc):
+		frappe.msgprint(
+			f"Email is missing for Supplier {doc.supplier}. "
+			f"Set the Email or a primary Contact with an email to make this invoice FIRS Ready.",
+			title="FIRS Validation",
+			indicator="orange",
+			alert=True,
+		)
+	if not get_counterparty_phone(doc):
+		frappe.msgprint(
+			f"Phone number is missing for Supplier {doc.supplier}. "
+			f"Set the Mobile No or a primary Contact with a phone to make this invoice FIRS Ready.",
 			title="FIRS Validation",
 			indicator="orange",
 			alert=True,
@@ -82,6 +102,12 @@ def _check_firs_ready(doc) -> bool:
 
 	# Supplier TIN is required — an invoice without it cannot be marked FIRS Ready.
 	if not get_counterparty_tin(doc):
+		return False
+
+	# Supplier email and phone are required — the FIRS payload needs them.
+	if not get_counterparty_email(doc):
+		return False
+	if not get_counterparty_phone(doc):
 		return False
 
 	return True
