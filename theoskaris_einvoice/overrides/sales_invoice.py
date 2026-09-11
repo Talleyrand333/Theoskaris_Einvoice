@@ -9,6 +9,7 @@ import frappe
 from theoskaris_einvoice.payload.validators import (
 	FIRSValidationError,
 	assert_not_transmitted,
+	get_counterparty_tin,
 	validate_sales_invoice,
 )
 from theoskaris_einvoice.utils.settings import is_firs_enabled_for
@@ -29,6 +30,16 @@ def validate(doc, method=None):
 
 	ready = _check_firs_ready(doc)
 	doc.db_set("custom_firs_ready", 1 if ready else 0)
+
+	# Warn when the Customer TIN is missing — it blocks FIRS upload
+	if not get_counterparty_tin(doc):
+		frappe.msgprint(
+			f"FIRS TIN is missing for Customer {doc.customer}. "
+			f"Set the FIRS TIN on the Customer record to make this invoice FIRS Ready.",
+			title="FIRS Validation",
+			indicator="orange",
+			alert=True,
+		)
 
 	# Warn about missing HSN codes using frappe.alert (non-blocking)
 	missing_items = [
@@ -69,8 +80,9 @@ def _check_firs_ready(doc) -> bool:
 		if not item.get("custom_firs_hsn_code"):
 			return False
 
-	# Customer TIN is optional — B2C invoices (no TIN) are valid for FIRS upload.
-	# The payload builder classifies them as B2C with a placeholder TIN.
+	# Customer TIN is required — an invoice without it cannot be marked FIRS Ready.
+	if not get_counterparty_tin(doc):
+		return False
 
 	return True
 

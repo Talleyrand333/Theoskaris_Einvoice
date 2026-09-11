@@ -22,6 +22,14 @@ def _get_tin(counterparty) -> str:
 	return counterparty.get("custom_firs_tin") or counterparty.get("tax_id") or ""
 
 
+def get_counterparty_tin(inv) -> str:
+	"""Resolved TIN of the invoice counterparty (Customer on Sales Invoice, Supplier on Purchase Invoice)."""
+	try:
+		return _get_tin(_get_counterparty(inv)).strip()
+	except Exception:
+		return ""
+
+
 def validate_sales_invoice(inv) -> list:
 	"""Run hard validation before submitting a Sales/Purchase Invoice to FIRS."""
 	errors = []
