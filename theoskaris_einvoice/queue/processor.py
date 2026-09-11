@@ -20,6 +20,21 @@ def _transmit_enabled() -> bool:
 		return False
 
 
+def _sync_upload_reference(queue_name: str, log_name: str | None, queue_status: str):
+	"""Mirror queue status and log reference onto the FIRS Invoice Upload child row.
+
+	Each FIRS Queue item was created by a FIRS Invoice Upload submission; its
+	child row (FIRS Upload Queue Reference) is otherwise frozen at Pending.
+	"""
+	ref_name = frappe.db.get_value("FIRS Upload Queue Reference", {"queue_name": queue_name})
+	if not ref_name:
+		return
+	values = {"status": queue_status}
+	if log_name:
+		values["log_name"] = log_name
+	frappe.db.set_value("FIRS Upload Queue Reference", ref_name, values, update_modified=False)
+
+
 def _make_stage(stage, status, ms=0, code="", error=""):
 	return {
 		"stage": stage,
@@ -90,11 +105,12 @@ def process_queue_item(queue_name: str):
 			validate_ms = round(time.time() * 1000 - start, 2)
 			status = "Invalid" if e.status_code and e.status_code < 500 else "Error"
 			stages.append(_make_stage("Validate", status, validate_ms, e.status_code, str(e)))
-			safe_log_run(status, json.dumps(e.response_body, default=str) if e.response_body else str(e), error_message=str(e), total_ms=validate_ms)
+			vf_log = safe_log_run(status, json.dumps(e.response_body, default=str) if e.response_body else str(e), error_message=str(e), total_ms=validate_ms)
 			if client.is_retryable(e):
 				queue.mark_failed(e)
 			else:
 				queue.mark_failed(e, increment_retry=False)
+			_sync_upload_reference(queue.name, vf_log, "Failed")
 			_set_invoice_status(inv, "Error", error=str(e))
 			return
 
@@ -110,11 +126,12 @@ def process_queue_item(queue_name: str):
 			sign_ms = round(time.time() * 1000 - start, 2)
 			status = "Error" if e.status_code and e.status_code >= 500 else "Invalid"
 			stages.append(_make_stage("Sign", status, sign_ms, e.status_code, str(e)))
-			safe_log_run(status, json.dumps(e.response_body, default=str) if e.response_body else str(e), error_message=str(e), irn=irn, total_ms=validate_ms + sign_ms)
+			sf_log = safe_log_run(status, json.dumps(e.response_body, default=str) if e.response_body else str(e), error_message=str(e), irn=irn, total_ms=validate_ms + sign_ms)
 			if client.is_retryable(e):
 				queue.mark_failed(e)
 			else:
 				queue.mark_failed(e, increment_retry=False)
+			_sync_upload_reference(queue.name, sf_log, "Failed")
 			_set_invoice_status(inv, "Error", error=str(e))
 			return
 
@@ -183,14 +200,16 @@ def process_queue_item(queue_name: str):
 
 		# One success log per run, with all stages in the child table
 		total_ms = validate_ms + sign_ms + transmit_ms + confirm_ms
-		safe_log_run("Success", json.dumps(_response, default=str), irn=irn, total_ms=total_ms)
+		log_name = safe_log_run("Success", json.dumps(_response, default=str), irn=irn, total_ms=total_ms)
 
 		queue.mark_completed(response=json.dumps(_response, default=str))
+		_sync_upload_reference(queue.name, log_name, "Completed")
 
 	except Exception as e:
 		# Ensure queue is failed if any unhandled error occurs
 		if queue.status == "Processing":
 			queue.mark_failed(e)
+			_sync_upload_reference(queue.name, None, "Failed")
 		frappe.log_error(title="FIRS Queue Processing Error", message=frappe.get_traceback())
 
 
