@@ -9,6 +9,7 @@ import frappe
 from theoskaris_einvoice.payload.validators import (
 	FIRSValidationError,
 	assert_not_transmitted,
+	get_counterparty_address,
 	get_counterparty_email,
 	get_counterparty_phone,
 	get_counterparty_tin,
@@ -104,10 +105,12 @@ def _check_firs_ready(doc) -> bool:
 	if not get_counterparty_tin(doc):
 		return False
 
-	# Customer email and phone are required — the FIRS payload needs them.
+	# Customer email, phone and address are required — the FIRS payload needs them.
 	if not get_counterparty_email(doc):
 		return False
 	if not get_counterparty_phone(doc):
+		return False
+	if not get_counterparty_address(doc):
 		return False
 
 	return True

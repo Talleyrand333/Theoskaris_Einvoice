@@ -10,6 +10,7 @@
     "field_order": [
         "enable_sales_invoice",
         "enable_purchase_invoice",
+        "default_payment_means",
         "enable_transmit",
         "transmit_note"
     ],
@@ -25,6 +26,14 @@
             "fieldtype": "Check",
             "label": "Enable for Purchase Invoice",
             "default": "0"
+        },
+        {
+            "fieldname": "default_payment_means",
+            "fieldtype": "Select",
+            "label": "Default Payment Means",
+            "options": "\n01\n03\n10\n30\n42\n49",
+            "default": "10",
+            "description": "NRS payment means code used when the invoice's Payment Terms Template has none set. 01=Cash, 03=Cheque, 10=Bank Transfer, 30=Card/POS, 42=Payment to bank account, 49=Direct debit"
         },
         {
             "fieldname": "enable_transmit",

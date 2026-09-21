@@ -384,5 +384,27 @@
         "insert_after": "uom_name",
         "description": "UN/ECE Rec 20 unit code sent to NRS/FIRS as price_unit (e.g. C62, KGM, LTR). Leave blank to use built-in name mapping.",
         "module": "FIRS E-Invoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Sales Taxes and Charges Template",
+        "fieldname": "custom_nrs_tax_category",
+        "label": "NRS Tax Category",
+        "fieldtype": "Select",
+        "options": "\nSTANDARD_VAT\nZERO_VAT\nEXEMPT\nWITHHOLDING_TAX\nSTAMP_DUTY",
+        "description": "NRS tax category sent for invoices using this template. Blank falls back to account-name matching.",
+        "insert_after": "taxes",
+        "module": "FIRS E-Invoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Purchase Taxes and Charges Template",
+        "fieldname": "custom_nrs_tax_category",
+        "label": "NRS Tax Category",
+        "fieldtype": "Select",
+        "options": "\nSTANDARD_VAT\nZERO_VAT\nEXEMPT\nWITHHOLDING_TAX\nSTAMP_DUTY",
+        "description": "NRS tax category sent for invoices using this template. Blank falls back to account-name matching.",
+        "insert_after": "taxes",
+        "module": "FIRS E-Invoice"
     }
 ]

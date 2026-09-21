@@ -68,6 +68,36 @@ def get_counterparty_phone(inv) -> str:
 		return ""
 
 
+def get_counterparty_address(inv) -> str:
+	"""Name of the counterparty's primary Address, or "" if none.
+
+	NRS needs a street, city and country on the party — an address with
+	missing core fields counts as absent.
+	"""
+	try:
+		counterparty = _get_counterparty(inv)
+		dt = counterparty.doctype
+		addr_name = counterparty.get(
+			"customer_primary_address" if dt == "Customer" else "supplier_primary_address"
+		)
+		if not addr_name:
+			addr_name = frappe.db.get_value(
+				"Dynamic Link",
+				{"parenttype": "Address", "link_doctype": dt, "link_name": counterparty.name},
+				"parent",
+			)
+		if not addr_name:
+			return ""
+		addr = frappe.db.get_value(
+			"Address", addr_name, ["address_line1", "city", "country"], as_dict=True
+		)
+		if not addr or not addr.address_line1 or not addr.city or not addr.country:
+			return ""
+		return addr_name
+	except Exception:
+		return ""
+
+
 def validate_sales_invoice(inv) -> list:
 	"""Run hard validation before submitting a Sales/Purchase Invoice to FIRS."""
 	errors = []
@@ -113,14 +143,22 @@ def validate_sales_invoice(inv) -> list:
 					)
 				)
 
-	# Validate the counterparty (Customer for SI, Supplier for PI)
-	try:
-		counterparty = _get_counterparty(inv)
-		tin = _get_tin(counterparty)
-		if not tin:
-			pass  # B2C/B2B allowed without TIN, logged only
-	except Exception:
-		pass  # Counterparty validation is optional
+	# Counterparty details are required for NRS (TIN, email, phone, address)
+	tin = get_counterparty_tin(inv)
+	if not tin:
+		errors.append(
+			_("Counterparty TIN is missing — set Tax ID on {0} for NRS upload").format(
+				inv.customer if inv.doctype == "Sales Invoice" else inv.supplier
+			)
+		)
+	if not get_counterparty_email(inv):
+		errors.append(_("Counterparty email is missing — required for NRS upload"))
+	if not get_counterparty_phone(inv):
+		errors.append(_("Counterparty phone is missing — required for NRS upload"))
+	if not get_counterparty_address(inv):
+		errors.append(
+			_("Counterparty address is missing (needs street, city and country) — required for NRS upload")
+		)
 
 	# Credit notes must reference an already-transmitted original invoice
 	if inv.is_return:

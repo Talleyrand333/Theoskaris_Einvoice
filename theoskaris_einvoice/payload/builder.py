@@ -8,15 +8,12 @@ from frappe.utils import flt, get_datetime
 from theoskaris_einvoice.payload.uom_map import UOM_NRS_CODE_MAP
 
 
-PLACEHOLDER_TIN = "00000000-0001"
-PLACEHOLDER_EMAIL = "noreply@theoskaris.com"
-PLACEHOLDER_PHONE = "+2340000000000"
-PLACEHOLDER_ADDRESS = {
-	"street_name": "1 Marina Road",
-	"city_name": "Lagos",
-	"lga": "Lagos Island",
-	"state": "Lagos",
-	"postal_zone": "100001",
+EMPTY_ADDRESS = {
+	"street_name": "",
+	"city_name": "",
+	"lga": "",
+	"state": "",
+	"postal_zone": "",
 	"country": "NG",
 }
 
@@ -147,29 +144,26 @@ def build_payload(invoice: str | Any) -> dict:
 
 def _get_invoice_kind(customer) -> str:
 	"""Return B2B if customer has a TIN (standard Tax ID), otherwise B2C."""
-	tin = _get_tin(customer)
-	if tin and tin != PLACEHOLDER_TIN:
+	if _get_tin(customer):
 		return "B2B"
 	return "B2C"
 
 
 def _get_tin(customer) -> str:
-	"""Get customer TIN from the standard Tax ID field, falling back to placeholder."""
+	"""Get customer TIN from the standard Tax ID field. Empty when unset."""
 	tin = customer.get("tax_id")
-	if tin:
-		return str(tin).strip()
-	return PLACEHOLDER_TIN
+	return str(tin).strip() if tin else ""
 
 
 def _build_supplier_party(company) -> dict:
 	"""Build accounting supplier party from Company."""
-	tin = company.get("custom_firs_company_tin") or company.get("tax_id") or PLACEHOLDER_TIN
-	address = _get_address(company.name, "Company") or PLACEHOLDER_ADDRESS
+	tin = company.get("custom_firs_company_tin") or company.get("tax_id") or ""
+	address = _get_address(company.name, "Company") or EMPTY_ADDRESS
 	return {
 		"party_name": company.company_name,
 		"tin": str(tin).strip(),
-		"email": company.get("email") or PLACEHOLDER_EMAIL,
-		"telephone": _normalize_phone(company.get("phone_no")) or PLACEHOLDER_PHONE,
+		"email": company.get("email") or "",
+		"telephone": _normalize_phone(company.get("phone_no")) or "",
 		"business_description": company.get("custom_firs_business_description") or company.company_name,
 		"postal_address": address,
 	}
@@ -178,17 +172,15 @@ def _build_supplier_party(company) -> dict:
 def _build_customer_party(customer) -> dict:
 	"""Build accounting customer party from Customer."""
 	tin = _get_tin(customer)
-	address = _get_address(customer.name, "Customer") or PLACEHOLDER_ADDRESS
+	address = _get_address(customer.name, "Customer") or EMPTY_ADDRESS
 	phone = _normalize_phone(customer.get("mobile_no"))
 	if not phone:
 		phone = _get_contact_phone(customer.name, "Customer")
-	if not phone:
-		phone = PLACEHOLDER_PHONE
 	return {
 		"party_name": customer.customer_name,
 		"tin": tin,
-		"email": customer.get("email_id") or _get_contact_email(customer.name, "Customer") or PLACEHOLDER_EMAIL,
-		"telephone": phone,
+		"email": customer.get("email_id") or _get_contact_email(customer.name, "Customer") or "",
+		"telephone": phone or "",
 		"business_description": customer.get("custom_firs_business_description") or customer.customer_name,
 		"postal_address": address,
 	}
@@ -196,18 +188,16 @@ def _build_customer_party(customer) -> dict:
 
 def _build_supplier_from_supplier(supplier) -> dict:
 	"""Build accounting supplier party from Supplier doc (Purchase Invoice)."""
-	tin = supplier.get("tax_id") or PLACEHOLDER_TIN
-	address = _get_address(supplier.name, "Supplier") or PLACEHOLDER_ADDRESS
+	tin = supplier.get("tax_id") or ""
+	address = _get_address(supplier.name, "Supplier") or EMPTY_ADDRESS
 	phone = _normalize_phone(supplier.get("mobile_no"))
 	if not phone:
 		phone = _get_contact_phone(supplier.name, "Supplier")
-	if not phone:
-		phone = PLACEHOLDER_PHONE
 	return {
 		"party_name": supplier.supplier_name,
 		"tin": str(tin).strip(),
-		"email": supplier.get("email_id") or _get_contact_email(supplier.name, "Supplier") or PLACEHOLDER_EMAIL,
-		"telephone": phone,
+		"email": supplier.get("email_id") or _get_contact_email(supplier.name, "Supplier") or "",
+		"telephone": phone or "",
 		"business_description": supplier.supplier_name,
 		"postal_address": address,
 	}
@@ -215,13 +205,13 @@ def _build_supplier_from_supplier(supplier) -> dict:
 
 def _build_customer_from_company(company) -> dict:
 	"""Build accounting customer party from Company (Purchase Invoice buyer)."""
-	tin = company.get("custom_firs_company_tin") or company.get("tax_id") or PLACEHOLDER_TIN
-	address = _get_address(company.name, "Company") or PLACEHOLDER_ADDRESS
+	tin = company.get("custom_firs_company_tin") or company.get("tax_id") or ""
+	address = _get_address(company.name, "Company") or EMPTY_ADDRESS
 	return {
 		"party_name": company.company_name,
 		"tin": str(tin).strip(),
-		"email": company.get("email") or PLACEHOLDER_EMAIL,
-		"telephone": _normalize_phone(company.get("phone_no")) or PLACEHOLDER_PHONE,
+		"email": company.get("email") or "",
+		"telephone": _normalize_phone(company.get("phone_no")) or "",
 		"business_description": company.company_name,
 		"postal_address": address,
 	}
@@ -438,12 +428,18 @@ def _item_is_stock(item_code: str) -> bool:
 
 
 def _build_tax_total(inv) -> list:
-	"""Build tax_total from invoice taxes grouped by FIRS tax category."""
+	"""Build tax_total from invoice taxes grouped by NRS tax category.
+
+	The NRS category is read from the NRS Tax Category field on the Sales/Purchase
+	Taxes and Charges Template assigned to the invoice (template_category),
+	falling back to description/account-head matching for templates where it is unset.
+	"""
 	totals = {}
+	template_category = _get_template_tax_category(inv)
 	for tax in inv.taxes:
 		if not tax.tax_amount:
 			continue
-		category = _resolve_tax_category(tax)
+		category = _resolve_tax_category(tax, inv, template_category)
 		key = category["id"]
 		if key not in totals:
 			totals[key] = {
@@ -458,10 +454,17 @@ def _build_tax_total(inv) -> list:
 
 	# Fallback when no taxes configured
 	if not totals:
-		totals["STANDARD_VAT"] = {
+		if template_category:
+			percent = NRS_TAX_CATEGORIES.get(template_category, 0.0)
+			if template_category == "STANDARD_VAT" and not percent:
+				percent = 7.5
+			category = {"id": template_category, "percent": percent, "tax_scheme": {"id": "VAT"}}
+		else:
+			category = {"id": "STANDARD_VAT", "percent": 7.5, "tax_scheme": {"id": "VAT"}}
+		totals[category["id"]] = {
 			"taxable_amount": flt(inv.net_total),
 			"tax_amount": 0.0,
-			"category": {"id": "STANDARD_VAT", "percent": 7.5, "tax_scheme": {"id": "VAT"}},
+			"category": category,
 		}
 
 	tax_total = []
@@ -482,14 +485,55 @@ def _build_tax_total(inv) -> list:
 	return tax_total
 
 
-def _resolve_tax_category(tax_row) -> dict:
-	"""Resolve tax row to a FIRS Tax Category."""
+# NRS tax category ids and their default VAT scheme.
+NRS_TAX_CATEGORIES = {
+	"STANDARD_VAT": 7.5,
+	"ZERO_VAT": 0.0,
+	"EXEMPT": 0.0,
+	"WITHHOLDING_TAX": 0.0,
+	"STAMP_DUTY": 0.0,
+}
+
+
+def _get_template_tax_category(inv) -> str:
+	"""Read NRS Tax Category from the Taxes and Charges Template on the invoice."""
+	template = inv.get("taxes_and_charges")
+	if not template:
+		return ""
+	template_doctype = (
+		"Purchase Taxes and Charges Template"
+		if inv.doctype == "Purchase Invoice"
+		else "Sales Taxes and Charges Template"
+	)
+	if not frappe.db.exists(template_doctype, template):
+		return ""
+	return (frappe.db.get_value(template_doctype, template, "custom_nrs_tax_category") or "").strip()
+
+
+def _resolve_tax_category(tax_row, inv=None, template_category: str = "") -> dict:
+	"""Resolve a tax row to an NRS Tax Category.
+
+	Priority: NRS Tax Category on the template assigned to the invoice, then
+	description/account-head keyword matching, then standard VAT at the row rate.
+	"""
+	if template_category:
+		rate = flt(tax_row.rate, 2)
+		if template_category != "STANDARD_VAT" and not rate:
+			rate = NRS_TAX_CATEGORIES.get(template_category, 0.0)
+		if not rate and template_category == "STANDARD_VAT":
+			rate = 7.5
+		return {"id": template_category, "percent": rate, "tax_scheme": {"id": "VAT"}}
+
 	# Try description first, then account head
 	search = (tax_row.description or tax_row.account_head or "").upper()
 	if "ZERO" in search:
 		return {"id": "ZERO_VAT", "percent": 0.0, "tax_scheme": {"id": "VAT"}}
 	if "EXEMPT" in search:
 		return {"id": "EXEMPT", "percent": 0.0, "tax_scheme": {"id": "VAT"}}
+	if "WITHHOLD" in search:
+		return {"id": "WITHHOLDING_TAX", "percent": 0.0, "tax_scheme": {"id": "VAT"}}
+	if "STAMP" in search:
+		return {"id": "STAMP_DUTY", "percent": 0.0, "tax_scheme": {"id": "VAT"}}
 	# Default to standard VAT at configured rate
 	rate = flt(tax_row.rate, 2)
 	if not rate:
@@ -525,14 +569,20 @@ def _build_legal_monetary_total(inv, tax_total) -> dict:
 def _build_payment_means(inv) -> list:
 	"""Build payment_means array from the invoice's Payment Terms Template.
 
-	Reads custom_firs_payment_code directly from Payment Terms Template.
-	Defaults to "10" (Bank Transfer).
+	Reads custom_firs_payment_code from the Payment Terms Template, falling back
+	to the Default Payment Means configured in FIRS Settings.
 	"""
-	code = "10"  # default bank transfer
+	code = None
 	if inv.get("payment_terms_template"):
-		mapped = frappe.db.get_value("Payment Terms Template", inv.payment_terms_template, "custom_firs_payment_code")
+		mapped = frappe.db.get_value(
+			"Payment Terms Template", inv.payment_terms_template, "custom_firs_payment_code"
+		)
 		if mapped:
 			code = mapped
+	if not code:
+		code = (
+			frappe.db.get_single_value("FIRS Settings", "default_payment_means") or "10"
+		)
 	return [
 		{
 			"payment_means_code": code,
