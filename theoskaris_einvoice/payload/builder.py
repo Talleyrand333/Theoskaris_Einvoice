@@ -5,6 +5,8 @@ from typing import Any
 import frappe
 from frappe.utils import flt, get_datetime
 
+from theoskaris_einvoice.payload.uom_map import UOM_NRS_CODE_MAP
+
 
 PLACEHOLDER_TIN = "00000000-0001"
 PLACEHOLDER_EMAIL = "noreply@theoskaris.com"
@@ -327,15 +329,21 @@ _UOM_CODE_MAP = {
 }
 
 
-def _price_unit_code(uom: str) -> str:
-	"""Convert a Frappe UOM name to a FIRS invoice quantity code.
+def _price_unit_code(uom: str, uom_doc: str = None) -> str:
+	"""Resolve the NRS/FIRS price_unit code for a UOM.
 
-	C62 = "one/unit" — accepted by FIRS for any count-based line and the
-	fallback when the UOM has no direct code. Codes: KGM/LTR/MTR/HUR/DAY/MON
-	for the physical/time units FIRS accepts.
+	Priority:
+	1. custom_nrs_uom_code on the UOM doc (manually set or seeded)
+	2. _UOM_CODE_MAP / UOM_NRS_CODE_MAP by name
+	3. Pass through if already a valid ≤3-char code, else C62
 	"""
+	if uom_doc and frappe.db.exists("UOM", uom_doc):
+		code = frappe.db.get_value("UOM", uom_doc, "custom_nrs_uom_code")
+		if code and code.strip():
+			return code.strip().upper()
+
 	u = (uom or "").strip().upper()
-	code = _UOM_CODE_MAP.get(u)
+	code = _UOM_CODE_MAP.get(u) or UOM_NRS_CODE_MAP.get(u)
 	if code:
 		return code
 	if len(u) <= 3 and u.isalpha():
@@ -391,7 +399,7 @@ def _build_invoice_lines(inv) -> list:
 				"price": {
 					"price_amount": net_rate,
 					"base_quantity": 1,
-					"price_unit": _price_unit_code(item.uom),
+					"price_unit": _price_unit_code(item.uom, item.uom),
 				},
 				"hsn_code": _format_hsn(item.get("custom_firs_hsn_code") or "0000.00"),
 				"product_category": item.get("item_group") or "General",

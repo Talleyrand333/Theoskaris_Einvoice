@@ -5,3 +5,4 @@
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 theoskaris_einvoice.patches.delete_party_tin_custom_field
+theoskaris_einvoice.patches.v1_2.seed_nrs_uom_codes

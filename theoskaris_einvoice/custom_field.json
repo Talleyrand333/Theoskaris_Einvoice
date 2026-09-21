@@ -371,5 +371,15 @@
         "description": "FIRS payment means code. 01=Cash, 03=Cheque, 10=Bank Transfer, 30=Card/POS, 42=Payment to bank account, 49=Direct debit",
         "insert_after": "allocate_payment_based_on_payment_terms",
         "module": "FIRS E-Invoice"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "UOM",
+        "fieldname": "custom_nrs_uom_code",
+        "label": "NRS UOM Code",
+        "fieldtype": "Data",
+        "insert_after": "uom_name",
+        "description": "UN/ECE Rec 20 unit code sent to NRS/FIRS as price_unit (e.g. C62, KGM, LTR). Leave blank to use built-in name mapping.",
+        "module": "FIRS E-Invoice"
     }
 ]
