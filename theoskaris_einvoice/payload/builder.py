@@ -382,13 +382,32 @@ def _normalize_phone(phone) -> str:
 
 
 def _build_invoice_lines(inv) -> list:
-	"""Build FIRS invoice lines from Sales Invoice items."""
+	"""Build FIRS invoice lines from Sales Invoice items.
+
+	Stock items (Maintain Stock) → hsn_code + product_category (goods).
+	Non-stock items (services) → isic_code + service_category (ISIC Rev.4).
+	"""
 	lines = []
 	for item in inv.items:
 		qty = abs(flt(item.qty))
 		net_rate = abs(flt(item.net_rate))
 		line_ext = abs(flt(item.net_amount))
 		discount = abs(flt(item.discount_amount))
+
+		code = (item.get("custom_firs_hsn_code") or "").strip()
+		is_stock = _item_is_stock(item.item_code)
+
+		if is_stock:
+			classification = {
+				"hsn_code": _format_hsn(code or "0000.00"),
+				"product_category": item.get("item_group") or "General",
+			}
+		else:
+			classification = {
+				"isic_code": code,
+				"service_category": item.get("item_group") or "General",
+			}
+
 		lines.append(
 			{
 				"item": {
@@ -401,14 +420,21 @@ def _build_invoice_lines(inv) -> list:
 					"base_quantity": 1,
 					"price_unit": _price_unit_code(item.uom, item.uom),
 				},
-				"hsn_code": _format_hsn(item.get("custom_firs_hsn_code") or "0000.00"),
-				"product_category": item.get("item_group") or "General",
+				**classification,
 				"invoiced_quantity": qty,
 				"line_extension_amount": line_ext,
 				"discount_amount": discount,
 			}
 		)
 	return lines
+
+
+def _item_is_stock(item_code: str) -> bool:
+	"""True if the item has Maintain Stock checked (goods); False = service."""
+	if not item_code:
+		return True  # default to goods when unknown
+	val = frappe.db.get_value("Item", item_code, "is_stock_item")
+	return 1 if val is None else bool(val)
 
 
 def _build_tax_total(inv) -> list:

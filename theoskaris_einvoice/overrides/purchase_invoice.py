@@ -23,7 +23,7 @@ def validate(doc, method=None):
 		doc.db_set("custom_firs_ready", 0)
 		return
 
-	# Auto-fetch HSN code from Item master if missing on invoice lines
+	# Auto-fetch NRS item code (HSN/ISIC) from Item master if missing on invoice lines
 	for item in doc.items:
 		if not item.get("custom_firs_hsn_code") and item.item_code:
 			hsn = frappe.db.get_value("Item", item.item_code, "custom_firs_hsn_code")
@@ -67,7 +67,7 @@ def validate(doc, method=None):
 	]
 	if missing_items:
 		frappe.msgprint(
-			f"Items missing FIRS HSN code: {', '.join(missing_items)}. "
+			f"Items missing NRS item code (HSN/ISIC): {', '.join(missing_items)}. "
 			f"Set the HSN code on the Item master to resolve.",
 			title="FIRS Validation",
 			indicator="orange",

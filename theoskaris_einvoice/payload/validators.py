@@ -3,6 +3,7 @@
 import frappe
 from frappe import _
 
+from theoskaris_einvoice.payload.builder import _item_is_stock
 from theoskaris_einvoice.utils.settings import is_firs_enabled_for
 
 
@@ -92,8 +93,25 @@ def validate_sales_invoice(inv) -> list:
 		errors.append(_("Invoice must have at least one item"))
 
 	for item in inv.items:
-		if not item.get("custom_firs_hsn_code"):
-			pass  # HSN not mandatory for services in v1; log only
+		code = (item.get("custom_firs_hsn_code") or "").strip()
+		is_stock = _item_is_stock(item.item_code)
+		if is_stock:
+			if not code:
+				pass  # HSN not mandatory for goods in v1; defaults to 0000.00, logged only
+		else:
+			# SERVICE line: ISIC code is a hard requirement per NRS schema
+			if not code:
+				errors.append(
+					_("Item {0} is a non-stock (service) item and needs an ISIC Rev.4 code in its NRS Item Code field").format(
+						item.item_name or item.item_code
+					)
+				)
+			if code and not code.replace(".", "").isdigit():
+				errors.append(
+					_("Item {0}: ISIC code should be numeric (e.g. 6202), got {1}").format(
+						item.item_name or item.item_code, code
+					)
+				)
 
 	# Validate the counterparty (Customer for SI, Supplier for PI)
 	try:
