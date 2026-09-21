@@ -14,6 +14,11 @@ def after_install():
 	frappe.clear_cache(doctype="FIRS Settings")
 	_create_firs_settings()
 	create_firs_custom_fields()
+	# Seed UOM codes now that the custom field exists (patches run before
+	# after_install on fresh installs).
+	from theoskaris_einvoice.patches.v1_2.seed_nrs_uom_codes import _seed_uom_codes
+
+	_seed_uom_codes()
 
 
 def after_migrate():

@@ -38,6 +38,9 @@ doc_events = {
 		"before_cancel": "theoskaris_einvoice.overrides.purchase_invoice.before_cancel",
 		"on_cancel": "theoskaris_einvoice.overrides.purchase_invoice.on_cancel",
 	},
+	"UOM": {
+		"before_validate": "theoskaris_einvoice.overrides.uom.before_validate",
+	},
 }
 
 # Scheduled Tasks
