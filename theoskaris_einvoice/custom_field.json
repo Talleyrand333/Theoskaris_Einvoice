@@ -358,12 +358,22 @@
         "doctype": "Custom Field",
         "dt": "Item",
         "fieldname": "custom_firs_hsn_code",
-        "label": "NRS Item Code (HSN/ISIC)",
+        "label": "NRS Goods Code (HSN)",
         "fieldtype": "Data",
         "insert_after": "description",
-        "description": "HSN code for stock items (e.g. 2203.00) or ISIC Rev.4 code for non-stock/service items (e.g. 6202). Sent as hsn_code or isic_code to NRS depending on Maintain Stock.",
+        "description": "HSN code for stock/goods items (e.g. 2203.00). Sent as hsn_code to NRS.",
         "module": "FIRS E-Invoice"
-    },
+        },
+        {
+        "doctype": "Custom Field",
+        "dt": "Item",
+        "fieldname": "custom_firs_isic_code",
+        "label": "NRS Service Code (ISIC)",
+        "fieldtype": "Data",
+        "insert_after": "custom_firs_hsn_code",
+        "description": "ISIC Rev.4 code (4-digit, e.g. 6202) for non-stock/service items. Sent as isic_code to NRS.",
+        "module": "FIRS E-Invoice"
+        },
     {
         "doctype": "Custom Field",
         "dt": "Payment Terms Template",
