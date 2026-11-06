@@ -1,8 +1,14 @@
-"""NRS MBS QR code generation per the official IRN Signing spec.
+"""NRS MBS QR code generation per the official spec.
 
-Flow (einvoice.nrs.gov.ng → System Integrators → QR Code):
-1. RSA-encrypt {"irn": "<IRN>.<unix_ts>", "certificate": "<b64 cert>"}
+Flow (einvoice.nrs.gov.ng docs, System Integrator QR Code):
+    jq --arg irn YOUR_IRN '{ irn: $irn, certificate: .certificate }' crypto_keys.txt > data.json
+    openssl pkeyutl -encrypt -inkey public_key.pem -pubin -in data.json -out encrypted_data.bin
+    base64 -i encrypted_data.bin -o encrypted_data.txt
+    qrencode -o qr_code.png -t PNG < encrypted_data.txt
+
+1. RSA-encrypt {"irn": "<IRN>", "certificate": "<b64 cert>"}
    with the taxpayer's public key (from crypto_keys.txt download).
+   NOTE: the IRN carries NO timestamp suffix — the spec encrypts the plain IRN.
 2. Base64-encode the ciphertext.
 3. Render that base64 string as a QR code image (scannable by MBS360).
 
@@ -12,7 +18,6 @@ PNG data URI is stored in custom_nrs_qr_code_url for print formats.
 
 import base64
 import json
-import time
 
 import frappe
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -26,7 +31,7 @@ def generate_qr_payload(irn: str, certificate: str, public_key_b64: str) -> str:
 	"""RSA-encrypt {irn, certificate}, return base64 string for QR rendering.
 
 	Args:
-		irn: Invoice Reference Number (no timestamp suffix; added here)
+		irn: Invoice Reference Number (exactly as registered, no suffix)
 		certificate: Base64 certificate string from crypto_keys.txt
 		public_key_b64: Base64-encoded PEM public key from crypto_keys.txt
 
@@ -44,9 +49,9 @@ def generate_qr_payload(irn: str, certificate: str, public_key_b64: str) -> str:
 	pem_bytes = base64.b64decode(public_key_b64)
 	public_key = load_pem_public_key(pem_bytes)
 
-	timestamp = int(time.time())
+	# NRS spec: the encrypted JSON is exactly {irn, certificate}. No timestamp.
 	payload = json.dumps(
-		{"irn": f"{irn}.{timestamp}", "certificate": certificate},
+		{"irn": irn, "certificate": certificate},
 		separators=(",", ":"),
 	).encode()
 
@@ -131,7 +136,7 @@ if __name__ == "__main__":
 
 	decrypted = key.decrypt(base64.b64decode(result), _p.PKCS1v15())
 	payload = json.loads(decrypted)
-	assert payload["irn"].startswith("INV001-TEST0001-20240101."), f"IRN mismatch: {payload['irn']}"
+	assert payload["irn"] == "INV001-TEST0001-20240101", f"IRN mismatch: {payload['irn']}"
 	assert payload["certificate"] == cert, "Certificate mismatch"
 	uri = generate_qr_data_uri(result)
 	assert uri.startswith("data:image/png;base64,")
