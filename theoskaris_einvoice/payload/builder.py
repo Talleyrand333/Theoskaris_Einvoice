@@ -354,6 +354,18 @@ def _format_hsn(hsn: str) -> str:
 	return hsn
 
 
+def _format_isic(isic: str) -> str:
+	"""Normalize ISIC code to plain 4 digits (NRS format: 0000).
+
+	Accepts values stored with a decimal suffix (e.g. 0000.00 from HSN-style
+	entry) and strips it: the NRS ISIC validator expects exactly 4 digits.
+	"""
+	isic = str(isic).strip()
+	if "." in isic:
+		isic = isic.split(".")[0]
+	return isic
+
+
 def _normalize_phone(phone) -> str:
 	"""Normalize Nigerian phone to E.164-ish +234 format."""
 	if not phone:
@@ -397,7 +409,7 @@ def _build_invoice_lines(inv) -> list:
 			}
 		else:
 			classification = {
-				"isic_code": code,
+				"isic_code": _format_isic(code or "0000"),
 				"service_category": item.get("item_group") or "General",
 			}
 
