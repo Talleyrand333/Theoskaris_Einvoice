@@ -585,7 +585,10 @@ def _get_payment_status(inv) -> str:
 	"""Derive NRS payment_status from linked Payment Entries / advances.
 
 	Returns PAID when the invoice is fully reconciled (outstanding_amount
-	<= 0.1), PARTIAL when some payment is reconciled, PENDING otherwise.
+	<= 0.1), PENDING otherwise. NRS rejects PARTIAL as an initial status
+	("initial invoice payment status cannot be PARTIAL or REJECTED") — a
+	partially paid invoice is registered as PENDING and updated to PAID
+	once fully settled (via the payment-update flow, when available).
 	"""
 	if inv.doctype not in ("Sales Invoice", "Purchase Invoice"):
 		return "PENDING"
@@ -595,8 +598,6 @@ def _get_payment_status(inv) -> str:
 
 	if grand_total and outstanding <= 0.1:
 		return "PAID"
-	if outstanding < grand_total:
-		return "PARTIAL"
 	return "PENDING"
 
 
