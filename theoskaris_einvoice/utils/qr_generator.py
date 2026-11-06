@@ -36,7 +36,10 @@ def generate_qr_payload(irn: str, certificate: str, public_key_b64: str) -> str:
 	if not public_key_b64:
 		raise ValueError("FIRS public key not configured on Company")
 	if not certificate:
-		raise ValueError("FIRS certificate not configured on Company")
+		# Certificate is optional per the eTranzact docs: without it the QR
+		# resolves to "Test Business" as the seller, which is acceptable in
+		# sandbox / Test Mode. Encrypt an empty string rather than failing.
+		certificate = ""
 
 	pem_bytes = base64.b64decode(public_key_b64)
 	public_key = load_pem_public_key(pem_bytes)
