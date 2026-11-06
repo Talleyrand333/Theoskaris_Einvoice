@@ -84,7 +84,7 @@ def build_payload(invoice: str | Any) -> dict:
 		supplier_party = _build_supplier_party(company)
 		customer_party = _build_customer_party(customer)
 
-	invoice_type_code = "381" if not inv.is_return else "380"
+	invoice_type_code = "380" if not inv.is_return else "381"
 	lines = _build_invoice_lines(inv)
 	tax_total = _build_tax_total(inv)
 	legal_monetary_total = _build_legal_monetary_total(inv, tax_total)
@@ -111,7 +111,7 @@ def build_payload(invoice: str | Any) -> dict:
 		"issue_time": issue_time,
 		"invoice_type_code": invoice_type_code,
 		"invoice_kind": invoice_kind,
-		"payment_status": "PENDING",
+		"payment_status": _get_payment_status(inv),
 		"tax_point_date": issue_date,
 		"document_currency_code": inv.currency,
 		"tax_currency_code": inv.currency,
@@ -564,6 +564,25 @@ def _build_legal_monetary_total(inv, tax_total) -> dict:
 		"tax_inclusive_amount": tax_inclusive,
 		"payable_amount": tax_inclusive,
 	}
+
+
+def _get_payment_status(inv) -> str:
+	"""Derive NRS payment_status from linked Payment Entries / advances.
+
+	Returns PAID when the invoice is fully reconciled (outstanding_amount
+	<= 0.1), PARTIAL when some payment is reconciled, PENDING otherwise.
+	"""
+	if inv.doctype not in ("Sales Invoice", "Purchase Invoice"):
+		return "PENDING"
+
+	outstanding = flt(inv.get("outstanding_amount"))
+	grand_total = flt(inv.get("grand_total"))
+
+	if grand_total and outstanding <= 0.1:
+		return "PAID"
+	if outstanding < grand_total:
+		return "PARTIAL"
+	return "PENDING"
 
 
 def _build_payment_means(inv) -> list:
