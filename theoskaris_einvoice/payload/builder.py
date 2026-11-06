@@ -84,7 +84,7 @@ def build_payload(invoice: str | Any) -> dict:
 		supplier_party = _build_supplier_party(company)
 		customer_party = _build_customer_party(customer)
 
-	invoice_type_code = "380" if not inv.is_return else "381"
+	invoice_type_code = "381" if not inv.is_return else "380"
 	lines = _build_invoice_lines(inv)
 	tax_total = _build_tax_total(inv)
 	legal_monetary_total = _build_legal_monetary_total(inv, tax_total)
