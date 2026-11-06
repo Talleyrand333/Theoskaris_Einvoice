@@ -35,6 +35,16 @@ def _sync_upload_reference(queue_name: str, log_name: str | None, queue_status: 
 	frappe.db.set_value("FIRS Upload Queue Reference", ref_name, values, update_modified=False)
 
 
+def _sync_queue_log(queue_name: str, log_name: str | None, queue_status: str = None):
+	"""Mirror the FIRS Log link (and status) onto the FIRS Queue row itself.
+
+	Lets users open the full stage-by-stage log straight from the queue.
+	"""
+	if not log_name:
+		return
+	frappe.db.set_value("FIRS Queue", queue_name, {"firs_log": log_name}, update_modified=False)
+
+
 def _make_stage(stage, status, ms=0, code="", error=""):
 	return {
 		"stage": stage,
@@ -110,7 +120,8 @@ def process_queue_item(queue_name: str):
 				queue.mark_failed(e)
 			else:
 				queue.mark_failed(e, increment_retry=False)
-			_sync_upload_reference(queue.name, vf_log, "Failed")
+				_sync_upload_reference(queue.name, vf_log, "Failed")
+			_sync_queue_log(queue.name, vf_log)
 			_set_invoice_status(inv, "Error", error=str(e))
 			return
 
@@ -131,7 +142,8 @@ def process_queue_item(queue_name: str):
 				queue.mark_failed(e)
 			else:
 				queue.mark_failed(e, increment_retry=False)
-			_sync_upload_reference(queue.name, sf_log, "Failed")
+				_sync_upload_reference(queue.name, sf_log, "Failed")
+			_sync_queue_log(queue.name, sf_log)
 			_set_invoice_status(inv, "Error", error=str(e))
 			return
 
@@ -221,12 +233,14 @@ def process_queue_item(queue_name: str):
 
 		queue.mark_completed(response=json.dumps(_response, default=str))
 		_sync_upload_reference(queue.name, log_name, "Completed")
+		_sync_queue_log(queue.name, log_name)
 
 	except Exception as e:
 		# Ensure queue is failed if any unhandled error occurs
 		if queue.status == "Processing":
 			queue.mark_failed(e)
 			_sync_upload_reference(queue.name, None, "Failed")
+		_sync_queue_log(queue.name, None)
 		frappe.log_error(title="FIRS Queue Processing Error", message=frappe.get_traceback())
 
 
