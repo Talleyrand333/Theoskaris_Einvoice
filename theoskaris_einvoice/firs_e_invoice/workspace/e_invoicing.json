@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"xVwO2hRf5c\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>E-Invoicing</b></span>\"}},{\"id\":\"eMfJk4rR7b\",\"type\":\"paragraph\",\"data\":{\"text\":\"FIRS/NRS e-Invoicing integration via eTranzact. Configure settings, push invoices, monitor the queue and logs, and verify registration status.\"}},{\"id\":\"sEtT1nGs4a\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"sEcTiOn0ne1\",\"type\":\"paragraph\",\"data\":{\"text\":\"<b>Setup</b>\",\"text_level\":4}},{\"id\":\"cArD1sEtUp2\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuration\",\"col\":4}},{\"id\":\"sEcTiOnTw03\",\"type\":\"paragraph\",\"data\":{\"text\":\"<b>Push Invoices</b>\",\"text_level\":4}},{\"id\":\"cArDpUsH4\",\"type\":\"card\",\"data\":{\"card_name\":\"Upload\",\"col\":4}},{\"id\":\"cArDmAsT5\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"id\":\"sEcTiOnThReE6\",\"type\":\"paragraph\",\"data\":{\"text\":\"<b>Monitor</b>\",\"text_level\":4}},{\"id\":\"cArDmOnItOr7\",\"type\":\"card\",\"data\":{\"card_name\":\"Monitoring\",\"col\":4}},{\"id\":\"cArDdOcS8\",\"type\":\"card\",\"data\":{\"card_name\":\"Invoices\",\"col\":4}}]",
+ "content": "[{\"id\": \"hdr001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>E-Invoicing</b></span>\", \"col\": 12}}, {\"id\": \"par001\", \"type\": \"paragraph\", \"data\": {\"text\": \"FIRS/NRS e-Invoicing integration via eTranzact. Configure settings, push invoices, monitor the queue and logs, and verify registration status.\", \"col\": 12}}, {\"id\": \"parS01\", \"type\": \"paragraph\", \"data\": {\"text\": \"Setup\", \"text_level\": 4, \"col\": 12}}, {\"id\": \"crdCfg\", \"type\": \"card\", \"data\": {\"card_name\": \"Configuration\", \"col\": 4}}, {\"id\": \"crdMst\", \"type\": \"card\", \"data\": {\"card_name\": \"FIRS Masters\", \"col\": 4}}, {\"id\": \"crdUpl\", \"type\": \"card\", \"data\": {\"card_name\": \"Upload & Queue\", \"col\": 4}}, {\"id\": \"parS02\", \"type\": \"paragraph\", \"data\": {\"text\": \"Invoicing\", \"text_level\": 4, \"col\": 12}}, {\"id\": \"crdInv\", \"type\": \"card\", \"data\": {\"card_name\": \"Invoices\", \"col\": 4}}, {\"id\": \"crdPay\", \"type\": \"card\", \"data\": {\"card_name\": \"Payments\", \"col\": 4}}, {\"id\": \"parS03\", \"type\": \"paragraph\", \"data\": {\"text\": \"Monitor\", \"text_level\": 4, \"col\": 12}}, {\"id\": \"crdMon\", \"type\": \"card\", \"data\": {\"card_name\": \"Monitoring\", \"col\": 4}}]",
  "creation": "2026-11-06 21:20:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -16,14 +16,19 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Configuration",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "FIRS Settings",
    "link_count": 0,
    "link_to": "FIRS Settings",
    "link_type": "DocType",
-   "onboard": 1,
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
+   "onboard": 0,
    "type": "Link"
   },
   {
@@ -33,83 +38,16 @@
    "link_count": 0,
    "link_to": "Company",
    "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
+   "onboard": 0,
    "type": "Link"
   },
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "FIRS Invoice Upload",
+   "label": "FIRS Masters",
    "link_count": 0,
-   "link_to": "FIRS Invoice Upload",
-   "link_type": "DocType",
-   "onboard": 1,
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "FIRS Queue",
-   "link_count": 0,
-   "link_to": "FIRS Queue",
-   "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Sales Invoice",
-   "link_count": 0,
-   "link_to": "Sales Invoice",
-   "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Purchase Invoice",
-   "link_count": 0,
-   "link_to": "Purchase Invoice",
-   "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "FIRS Log",
-   "link_count": 0,
-   "link_to": "FIRS Log",
-   "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Error Log",
-   "link_count": 0,
-   "link_to": "Error Log",
-   "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
-   "type": "Link"
+   "onboard": 0,
+   "type": "Card Break"
   },
   {
    "hidden": 0,
@@ -118,9 +56,7 @@
    "link_count": 0,
    "link_to": "Customer",
    "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
+   "onboard": 0,
    "type": "Link"
   },
   {
@@ -130,9 +66,7 @@
    "link_count": 0,
    "link_to": "Supplier",
    "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
+   "onboard": 0,
    "type": "Link"
   },
   {
@@ -142,45 +76,7 @@
    "link_count": 0,
    "link_to": "Item",
    "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Payment Terms Template",
-   "link_count": 0,
-   "link_to": "Payment Terms Template",
-   "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Sales Taxes and Charges Template",
-   "link_count": 0,
-   "link_to": "Sales Taxes and Charges Template",
-   "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Purchase Taxes and Charges Template",
-   "link_count": 0,
-   "link_to": "Purchase Taxes and Charges Template",
-   "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "Workspace",
-   "parenttype": "Workspace",
+   "onboard": 0,
    "type": "Link"
   },
   {
@@ -190,9 +86,149 @@
    "link_count": 0,
    "link_to": "UOM",
    "link_type": "DocType",
-   "parent": "E-Invoicing",
-   "parentfield": "links",
-   "parenttype": "Workspace",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Payment Terms Template",
+   "link_count": 0,
+   "link_to": "Payment Terms Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Taxes and Charges Template",
+   "link_count": 0,
+   "link_to": "Sales Taxes and Charges Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Purchase Taxes and Charges Template",
+   "link_count": 0,
+   "link_to": "Purchase Taxes and Charges Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Upload & Queue",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FIRS Invoice Upload",
+   "link_count": 0,
+   "link_to": "FIRS Invoice Upload",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FIRS Queue",
+   "link_count": 0,
+   "link_to": "FIRS Queue",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Invoices",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Invoice",
+   "link_count": 0,
+   "link_to": "Sales Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Purchase Invoice",
+   "link_count": 0,
+   "link_to": "Purchase Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Payments",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Payment Entry",
+   "link_count": 0,
+   "link_to": "Payment Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Payment Reconciliation",
+   "link_count": 0,
+   "link_to": "Payment Reconciliation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Monitoring",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "FIRS Log",
+   "link_count": 0,
+   "link_to": "FIRS Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Error Log",
+   "link_count": 0,
+   "link_to": "Error Log",
+   "link_type": "DocType",
+   "onboard": 0,
    "type": "Link"
   }
  ],
@@ -205,6 +241,35 @@
  "parent_page": "",
  "public": 1,
  "refresh": "Links refresh automatically when documents are created, updated or deleted",
- "shortcuts": [],
+ "shortcuts": [
+  {
+   "color": "#449CF0",
+   "doc_view": "List",
+   "label": "FIRS Invoice Upload",
+   "type": "DocType",
+   "link_to": "FIRS Invoice Upload"
+  },
+  {
+   "color": "#449CF0",
+   "doc_view": "List",
+   "label": "FIRS Queue",
+   "type": "DocType",
+   "link_to": "FIRS Queue"
+  },
+  {
+   "color": "#449CF0",
+   "doc_view": "List",
+   "label": "Sales Invoice",
+   "type": "DocType",
+   "link_to": "Sales Invoice"
+  },
+  {
+   "color": "#449CF0",
+   "doc_view": "List",
+   "label": "FIRS Log",
+   "type": "DocType",
+   "link_to": "FIRS Log"
+  }
+ ],
  "title": "E-Invoicing"
 }
