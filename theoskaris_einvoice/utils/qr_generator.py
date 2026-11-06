@@ -99,6 +99,15 @@ def generate_invoice_qr(inv, irn: str) -> tuple[str, str]:
 	except Exception:
 		pass
 
+	if not certificate:
+		# Without the taxpayer certificate the QR cannot be resolved to this
+		# business by MBS360 — it will not validate. Log so it is never a
+		# silent failure in production.
+		frappe.log_error(
+			title="FIRS QR generated WITHOUT certificate — will not validate in MBS360",
+			message=f"Invoice {inv.name}, IRN {irn}. Set FIRS Digital Certificate on Company {inv.company}.",
+		)
+
 	qr_payload = generate_qr_payload(irn, certificate, public_key_b64)
 	return qr_payload, generate_qr_data_uri(qr_payload)
 
