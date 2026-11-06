@@ -121,6 +121,31 @@ class BaseFIRSClient(ABC):
 			)
 		return body
 
+	def update_payment_status(self, irn: str, status: str, amount=None, reference=None) -> dict:
+		"""Update payment status of a registered invoice: PATCH /api/v1/invoice/update/{irn}.
+
+		Docs (v3, works on v1 host per live probe 2026-11-06):
+		- {"payment_status": "PAID"} or {"payment_status": "REJECTED"}
+		- {"payment_status": "PARTIAL", "amount": <number>, "reference": "<note>"}
+		PAID/REJECTED are terminal — no further updates allowed.
+		"""
+		payload = {"payment_status": status}
+		if status == "PARTIAL":
+			if amount is None:
+				raise FIRSAPIError("PARTIAL update requires amount")
+			payload["amount"] = amount
+			if reference:
+				payload["reference"] = reference
+		resp = self._request("PATCH", f"/api/v1/invoice/update/{irn}", payload=payload)
+		body = self._parse_response(resp)
+		if not resp.ok:
+			raise FIRSAPIError(
+				f"FIRS payment status update failed: {body}",
+				status_code=resp.status_code,
+				response_body=body,
+			)
+		return body
+
 	def generate_irn(self, invoice_number: str, issuance_date: str) -> dict:
 		"""Generate IRN via SI endpoint: POST /api/v3/si/generate-irn.
 

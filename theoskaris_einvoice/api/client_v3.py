@@ -151,6 +151,20 @@ class EtranzactV3Client(BaseFIRSClient):
 			payload["certificate"] = certificate
 		return self._call("POST", "/api/v3/si/generate-qr-code", payload, "generate-qr-code")
 
+	def update_payment_status(self, irn: str, status: str, amount=None, reference=None) -> dict:
+		"""PATCH /api/v3/app/invoice/update/{irn} — payment status updates.
+
+		PAID/REJECTED terminal; PARTIAL takes amount + optional reference.
+		"""
+		payload = {"payment_status": status}
+		if status == "PARTIAL":
+			if amount is None:
+				raise FIRSAPIError("PARTIAL update requires amount")
+			payload["amount"] = amount
+			if reference:
+				payload["reference"] = reference
+		return self._call("PATCH", f"/api/v3/app/invoice/update/{irn}", payload, "payment-update")
+
 	def download_invoice(self, irn: str) -> dict:
 		"""Download invoice (v1 had /api/v1/invoice/download/{irn}).
 

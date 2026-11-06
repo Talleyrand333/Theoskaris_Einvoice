@@ -24,6 +24,9 @@ doctype_list_js = {
 # Document Events
 # ---------------
 doc_events = {
+	"Payment Entry": {
+		"on_submit": "theoskaris_einvoice.overrides.payment_entry.on_submit",
+	},
 	"Sales Invoice": {
 		"validate": "theoskaris_einvoice.overrides.sales_invoice.validate",
 		"before_submit": "theoskaris_einvoice.overrides.sales_invoice.before_submit",
