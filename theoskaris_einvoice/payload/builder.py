@@ -385,6 +385,9 @@ def _build_invoice_lines(inv) -> list:
 		discount = abs(flt(item.discount_amount))
 
 		code = (item.get("custom_firs_hsn_code") or "").strip()
+		if not code:
+			# Service lines: fall back to the ISIC code when HSN is absent
+			code = (frappe.db.get_value("Item", item.item_code, "custom_firs_isic_code") or "").strip()
 		is_stock = _item_is_stock(item.item_code)
 
 		if is_stock:

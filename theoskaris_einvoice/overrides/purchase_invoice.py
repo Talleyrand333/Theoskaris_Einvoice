@@ -27,7 +27,10 @@ def validate(doc, method=None):
 	# Auto-fetch NRS item code (HSN/ISIC) from Item master if missing on invoice lines
 	for item in doc.items:
 		if not item.get("custom_firs_hsn_code") and item.item_code:
+			# Goods use HSN; services fall back to ISIC when HSN is not set
 			hsn = frappe.db.get_value("Item", item.item_code, "custom_firs_hsn_code")
+			if not hsn:
+				hsn = frappe.db.get_value("Item", item.item_code, "custom_firs_isic_code")
 			if hsn:
 				item.custom_firs_hsn_code = hsn
 
