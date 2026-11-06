@@ -121,6 +121,55 @@ class BaseFIRSClient(ABC):
 			)
 		return body
 
+	def generate_irn(self, invoice_number: str, issuance_date: str) -> dict:
+		"""Generate IRN via SI endpoint: POST /api/v3/si/generate-irn.
+
+		Docs: developers.etranzactng.com → Generate IRN.
+		Payload: {invoice_number, service_id, issuance_date, business_id}.
+		"""
+		payload = {
+			"invoice_number": invoice_number,
+			"service_id": self.company.get("custom_firs_service_id") or "",
+			"issuance_date": issuance_date,
+			"business_id": self.company.get("custom_firs_business_id") or "",
+		}
+		resp = self._request("POST", "/api/v3/si/generate-irn", payload=payload)
+		body = self._parse_response(resp)
+		if not resp.ok:
+			raise FIRSAPIError(
+				f"FIRS IRN generation failed: {body}",
+				status_code=resp.status_code,
+				response_body=body,
+			)
+		return body
+
+	def generate_qr_code(
+		self, invoice_number: str, issuance_date: str, certificate: str | None = None
+	) -> dict:
+		"""Generate QR code via SI endpoint: POST /api/v3/si/generate-qr-code.
+
+		Docs: certificate is optional — when omitted the Seller/Supplier field
+		prints "Test Business" (acceptable in sandbox/Test Mode).
+		Returns data.qr_code_base64 (base64 PNG) per the API docs.
+		"""
+		payload = {
+			"invoice_number": invoice_number,
+			"service_id": self.company.get("custom_firs_service_id") or "",
+			"issuance_date": issuance_date,
+			"business_id": self.company.get("custom_firs_business_id") or "",
+		}
+		if certificate:
+			payload["certificate"] = certificate
+		resp = self._request("POST", "/api/v3/si/generate-qr-code", payload=payload)
+		body = self._parse_response(resp)
+		if not resp.ok:
+			raise FIRSAPIError(
+				f"FIRS QR generation failed: {body}",
+				status_code=resp.status_code,
+				response_body=body,
+			)
+		return body
+
 	def verify_tin(self, tin: str) -> dict:
 		"""Lookup a taxpayer by TIN."""
 		resp = self._request("GET", f"/api/v1/invoice/transmit/lookup/tin/{tin}")

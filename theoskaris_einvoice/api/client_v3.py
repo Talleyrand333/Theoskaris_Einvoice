@@ -121,6 +121,36 @@ class EtranzactV3Client(BaseFIRSClient):
 		"""Confirm Invoice: GET /api/v3/app/invoice/confirm/{irn}."""
 		return self._call("GET", f"/api/v3/app/invoice/confirm/{irn}", None, "confirm")
 
+	# -- SI endpoints (IRN / QR generation) ---------------------------------
+
+	def generate_irn(self, invoice_number: str, issuance_date: str) -> dict:
+		"""Generate IRN via SI endpoint: POST /api/v3/si/generate-irn."""
+		payload = {
+			"invoice_number": invoice_number,
+			"service_id": self.company.get("custom_firs_service_id") or "",
+			"issuance_date": issuance_date,
+			"business_id": self.company.get("custom_firs_business_id") or "",
+		}
+		return self._call("POST", "/api/v3/si/generate-irn", payload, "generate-irn")
+
+	def generate_qr_code(
+		self, invoice_number: str, issuance_date: str, certificate: str | None = None
+	) -> dict:
+		"""Generate QR via SI endpoint: POST /api/v3/si/generate-qr-code.
+
+		Certificate optional — without it the QR prints "Test Business" as the
+		seller (fine for sandbox / Test Mode). Response: data.qr_code_base64.
+		"""
+		payload = {
+			"invoice_number": invoice_number,
+			"service_id": self.company.get("custom_firs_service_id") or "",
+			"issuance_date": issuance_date,
+			"business_id": self.company.get("custom_firs_business_id") or "",
+		}
+		if certificate:
+			payload["certificate"] = certificate
+		return self._call("POST", "/api/v3/si/generate-qr-code", payload, "generate-qr-code")
+
 	def download_invoice(self, irn: str) -> dict:
 		"""Download invoice (v1 had /api/v1/invoice/download/{irn}).
 

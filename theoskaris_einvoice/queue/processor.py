@@ -170,19 +170,36 @@ def process_queue_item(queue_name: str):
 			resp_confirm = None
 
 		# Persist IRN + response back to invoice
-		# QR code: generated per NRS IRN Signing spec (RSA-encrypt irn+certificate,
-		# render locally) — the API never returns a QR.
+		# QR code: preferred path is the eTranzact SI endpoint
+		# (POST /api/v3/si/generate-qr-code) which returns a ready base64 PNG;
+		# certificate is optional (Test Mode prints "Test Business" when omitted).
+		# Falls back to local RSA generation (NRS IRN Signing spec) on API failure.
 		qr_code = None
 		qr_data_uri = None
 		if irn:
+			issuance_date = str(inv.posting_date).replace("-", "")
+			certificate = frappe.db.get_value("Company", inv.company, "custom_firs_certificate") or None
 			try:
-				from theoskaris_einvoice.utils.qr_generator import generate_invoice_qr
-				qr_code, qr_data_uri = generate_invoice_qr(inv, irn)
+				qr_resp = client.generate_qr_code(inv.name, issuance_date, certificate)
+				qr_b64 = (qr_resp.get("data") or {}).get("qr_code_base64") if isinstance(qr_resp, dict) else None
+				if not qr_b64:
+					raise ValueError(f"no qr_code_base64 in response: {qr_resp}")
+				qr_code = qr_b64
+				qr_data_uri = f"data:image/png;base64,{qr_b64}"
+				stages.append(_make_stage("QR", "Success", 0, "", "via eTranzact SI endpoint"))
 			except Exception as e:
 				frappe.log_error(
-					title="FIRS QR Generation Failed",
+					title="FIRS QR API failed, trying local generation",
 					message=f"IRN: {irn}, Error: {e}\n{frappe.get_traceback()}",
 				)
+				try:
+					from theoskaris_einvoice.utils.qr_generator import generate_invoice_qr
+					qr_code, qr_data_uri = generate_invoice_qr(inv, irn)
+				except Exception as e2:
+					frappe.log_error(
+						title="FIRS QR Generation Failed",
+						message=f"IRN: {irn}, Error: {e2}\n{frappe.get_traceback()}",
+					)
 		_response = {
 			"validate_response": resp_validate,
 			"sign_response": resp_sign,
