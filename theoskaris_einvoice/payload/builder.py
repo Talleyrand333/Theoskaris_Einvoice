@@ -465,7 +465,9 @@ def _build_tax_total(inv) -> list:
 		# Add tax amount; base is net total for this row
 		base = abs(flt(tax.base_tax_amount)) or abs(flt(tax.tax_amount))
 		totals[key]["tax_amount"] += base
-		totals[key]["taxable_amount"] += _get_tax_base_for_row(tax, inv)
+		# Credit notes carry negative amounts; NRS requires the tax figures
+		# to be non-negative in the subtotal (the 380 type code conveys the sign).
+		totals[key]["taxable_amount"] += abs(_get_tax_base_for_row(tax, inv))
 
 	# Fallback when no taxes configured
 	if not totals:
@@ -477,7 +479,7 @@ def _build_tax_total(inv) -> list:
 		else:
 			category = {"id": "STANDARD_VAT", "percent": 7.5, "tax_scheme": {"id": "VAT"}}
 		totals[category["id"]] = {
-			"taxable_amount": flt(inv.net_total),
+			"taxable_amount": abs(flt(inv.net_total)),
 			"tax_amount": 0.0,
 			"category": category,
 		}
@@ -591,6 +593,9 @@ def _get_payment_status(inv) -> str:
 	once fully settled (via the payment-update flow, when available).
 	"""
 	if inv.doctype not in ("Sales Invoice", "Purchase Invoice"):
+		return "PENDING"
+	if inv.get("is_return"):
+		# A credit note is never "paid" — register it as PENDING.
 		return "PENDING"
 
 	outstanding = flt(inv.get("outstanding_amount"))
