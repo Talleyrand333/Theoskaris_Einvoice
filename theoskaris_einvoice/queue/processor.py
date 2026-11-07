@@ -4,6 +4,7 @@ import json
 import time
 
 import frappe
+from frappe.utils import flt
 
 from theoskaris_einvoice.api.client_base import FIRSAPIError, get_firs_client
 from theoskaris_einvoice.firs_e_invoice.doctype.firs_log.firs_log import log_request
@@ -227,6 +228,9 @@ def process_queue_item(queue_name: str):
 			response=_response,
 		)
 
+		# Registry must reflect the invoice's real payment state, not just PENDING
+		_sync_payment_status_after_sign(client, inv, irn, stages)
+
 		# One success log per run, with all stages in the child table
 		total_ms = validate_ms + sign_ms + transmit_ms + confirm_ms
 		log_name = safe_log_run("Success", json.dumps(_response, default=str), irn=irn, total_ms=total_ms)
@@ -242,6 +246,40 @@ def process_queue_item(queue_name: str):
 			_sync_upload_reference(queue.name, None, "Failed")
 		_sync_queue_log(queue.name, None)
 		frappe.log_error(title="FIRS Queue Processing Error", message=frappe.get_traceback())
+
+
+def _sync_payment_status_after_sign(client, inv, irn, stages):
+	"""Mirror the invoice's actual payment state into NRS right after signing.
+
+	PAID is already carried by the payload when the invoice is fully settled at
+	upload time. A partially paid invoice cannot register as PARTIAL (NRS
+	rejects that as an initial status), so the real paid amount is pushed here
+	immediately after the IRN exists.
+	"""
+	if inv.doctype not in ("Sales Invoice", "Purchase Invoice") or inv.get("is_return"):
+		return
+
+	inv.reload()
+	total = flt(inv.get("grand_total"))
+	outstanding = flt(inv.get("outstanding_amount"))
+	paid = total - outstanding
+
+	if total <= 0 or paid <= 0.009 or outstanding <= 0.009:
+		return
+
+	try:
+		client.update_payment_status(
+			irn, "PARTIAL", amount=paid, reference=f"AUTO {inv.name}"
+		)
+		stages.append(
+			_make_stage("Payment Status", "Success", 0, "", f"PARTIAL {paid:,.2f}")
+		)
+	except FIRSAPIError as e:
+		stages.append(
+			_make_stage("Payment Status", "Error", 0, e.status_code, str(e)[:200])
+		)
+	except Exception as e:
+		stages.append(_make_stage("Payment Status", "Error", 0, "", str(e)[:200]))
 
 
 def _extract_irn(response) -> str | None:

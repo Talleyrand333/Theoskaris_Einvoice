@@ -599,13 +599,15 @@ def _build_legal_monetary_total(inv, tax_total) -> dict:
 
 
 def _get_payment_status(inv) -> str:
-	"""Derive NRS payment_status from linked Payment Entries / advances.
+	"""Derive NRS payment_status from the invoice's own payment state.
 
-	Returns PAID when the invoice is fully reconciled (outstanding_amount
-	<= 0.1), PENDING otherwise. NRS rejects PARTIAL as an initial status
-	("initial invoice payment status cannot be PARTIAL or REJECTED") — a
-	partially paid invoice is registered as PENDING and updated to PAID
-	once fully settled (via the payment-update flow, when available).
+	Read at payload-build time, so it reflects the invoice as uploaded:
+	- fully settled (outstanding <= 0.1) -> PAID
+	- anything else -> PENDING
+	NRS rejects PARTIAL as an initial status ("initial invoice payment status
+	cannot be PARTIAL or REJECTED"), so a partially paid invoice is registered
+	PENDING and the partial amount is pushed by the queue right after signing
+	(see processor._sync_payment_status_after_sign).
 	"""
 	if inv.doctype not in ("Sales Invoice", "Purchase Invoice"):
 		return "PENDING"
