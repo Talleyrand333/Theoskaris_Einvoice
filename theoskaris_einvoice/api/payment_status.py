@@ -28,10 +28,48 @@ def push_payment_status(invoice, status, amount=None, reference=None):
 	if status not in ("PARTIAL", "PAID"):
 		frappe.throw(_("Status must be PARTIAL or PAID."))
 
-	if status == "PARTIAL":
+	# The registry must mirror the accounting record: derive what ERPNext
+	# actually knows and refuse anything the invoice does not support.
+	outstanding = flt(invoice.get("outstanding_amount"))
+	grand_total = flt(invoice.get("grand_total"))
+	paid = grand_total - outstanding
+
+	if status == "PAID":
+		if outstanding > 0.009:
+			frappe.throw(
+				_(
+					"Invoice {0} still has {1} outstanding in ERPNext. Record the "
+					"payment first; NRS must not show PAID before the books do."
+				).format(invoice.name, frappe.format_value(outstanding, {"fieldtype": "Currency"})),
+				title=_("Payment Not Recorded"),
+			)
+	else:
 		amount = flt(amount)
+		if paid <= 0:
+			frappe.throw(
+				_("No payment is recorded against {0}; nothing to send as PARTIAL.").format(
+					invoice.name
+				),
+				title=_("Payment Not Recorded"),
+			)
+		if outstanding <= 0.009:
+			frappe.throw(
+				_("Invoice {0} is fully paid in ERPNext. Use PAID instead.").format(invoice.name),
+				title=_("Invoice Fully Paid"),
+			)
 		if amount <= 0:
 			frappe.throw(_("Enter the amount paid for a PARTIAL update."))
+		if amount > paid + 0.009:
+			frappe.throw(
+				_(
+					"Amount {0} exceeds the {1} actually received against {2}."
+				).format(
+					frappe.format_value(amount, {"fieldtype": "Currency"}),
+					frappe.format_value(paid, {"fieldtype": "Currency"}),
+					invoice.name,
+				),
+				title=_("Amount Exceeds Payments"),
+			)
 
 	client = get_firs_client(invoice.company)
 	try:
