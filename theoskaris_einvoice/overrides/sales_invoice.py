@@ -65,6 +65,16 @@ def validate(doc, method=None):
 			alert=True,
 		)
 
+	# Warn when the company phone is missing — the NRS payload needs it
+	if not frappe.db.get_value("Company", doc.company, "phone_no"):
+		frappe.msgprint(
+			f"Company {doc.company} has no phone number. NRS requires the supplier "
+			f"telephone (starting with '+') on the FIRS payload.",
+			title="FIRS Validation",
+			indicator="orange",
+			alert=True,
+		)
+
 	# Warn about missing HSN codes using frappe.alert (non-blocking)
 	missing_items = [
 		item.item_code for item in doc.items if not item.get("custom_firs_hsn_code")
@@ -93,6 +103,10 @@ def _check_firs_ready(doc) -> bool:
 	if not company.get("custom_firs_service_id"):
 		return False
 	if not company.get("tax_id") and not company.get("custom_firs_company_tin"):
+		return False
+
+	# NRS requires a supplier telephone in E.164 form; the payload rejects a blank.
+	if not company.get("phone_no"):
 		return False
 
 	# Invoice must have items
