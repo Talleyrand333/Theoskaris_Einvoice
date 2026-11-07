@@ -464,7 +464,9 @@ def _build_tax_total(inv) -> list:
 				).format(tax.description or tax.account_head, inv.name),
 				title=frappe._("NRS Tax Category Missing"),
 			)
-		key = category["id"]
+		# One subtotal per category and rate: NRS expects separate
+		# WITHHOLDING_TAX subtotals when several rates apply.
+		key = (category["id"], round(flt(category.get("percent")), 4))
 		if key not in totals:
 			totals[key] = {
 				"taxable_amount": 0.0,
@@ -476,7 +478,7 @@ def _build_tax_total(inv) -> list:
 		totals[key]["tax_amount"] += base
 		# Credit notes carry negative amounts; NRS requires the tax figures
 		# to be non-negative in the subtotal (the 380 type code conveys the sign).
-		if key == "WITHHOLDING_TAX":
+		if category["id"] == "WITHHOLDING_TAX":
 			# WHT is computed on the net invoice value, not on a running total
 			totals[key]["taxable_amount"] += abs(flt(inv.net_total))
 		else:
@@ -533,6 +535,11 @@ NRS_TAX_CATEGORIES = {
 	"PERSONAL_INCOME_TAX": 0.0,
 	"PERSONAL_PROPERTY_TAX": 0.0,
 	"REAL_ESTATE_TAX": 0.0,
+	# NRS support (community forum, WHT threads) requires withholding and
+	# exempt lines to carry these identifiers even though the provider's
+	# resource list omits them; the API accepts them.
+	"WITHHOLDING_TAX": 0.0,
+	"EXEMPT": 0.0,
 }
 
 
