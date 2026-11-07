@@ -618,9 +618,22 @@ def _build_legal_monetary_total(inv, tax_total) -> dict:
 	all monetary values to be >= 0. Use abs() for safety.
 	"""
 	line_ext = abs(flt(inv.net_total))
-	tax_amt = sum(flt(t["tax_amount"]) for t in tax_total)
+
+	# WHT is reported as its own TaxSubtotal (NRS requirement) but it is money
+	# withheld at source, not money the buyer pays — so it reduces the payable
+	# amount instead of increasing it. This keeps payable == invoice grand total.
+	withheld = 0.0
+	added = 0.0
+	for total in tax_total:
+		for sub in total.get("tax_subtotal") or []:
+			amount = flt(sub.get("tax_amount"))
+			if (sub.get("tax_category") or {}).get("id") == "WITHHOLDING_TAX":
+				withheld += amount
+			else:
+				added += amount
+
 	tax_exclusive = line_ext
-	tax_inclusive = tax_exclusive + tax_amt
+	tax_inclusive = tax_exclusive + added - withheld
 	return {
 		"line_extension_amount": line_ext,
 		"tax_exclusive_amount": tax_exclusive,
