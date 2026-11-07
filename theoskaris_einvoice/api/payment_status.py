@@ -1,8 +1,10 @@
-"""Whitelisted endpoint: push an invoice's payment status to NRS.
+"""Whitelisted endpoints: push an invoice's payment status to NRS.
 
-NRS refuses PARTIAL at registration time, so a partially paid invoice is
-registered as PENDING and later moved to PARTIAL (or PAID) through
-PATCH /invoice/update/{irn}. This exposes that call to the desk UI.
+NRS tracks a remaining balance per invoice. The amount on a PARTIAL update is
+the instalment being reported now, not the cumulative amount paid, and an
+instalment that clears the balance must be sent as PAID. We therefore track what
+has already been reported (custom_nrs_paid_reported) and derive the instalment
+from the invoice's own figures.
 """
 
 import frappe
@@ -11,94 +13,152 @@ from frappe.utils import flt
 
 from theoskaris_einvoice.api.client_base import FIRSAPIError, get_firs_client
 
+TOLERANCE = 0.009
+
+
+def _state(inv):
+	total = flt(inv.get("grand_total"))
+	outstanding = flt(inv.get("outstanding_amount"))
+	paid = total - outstanding
+	reported = flt(inv.get("custom_nrs_paid_reported"))
+	remaining_nrs = max(total - reported, 0.0)
+	instalment = max(paid - reported, 0.0)
+	return {
+		"total": total,
+		"erp_paid": paid,
+		"outstanding": outstanding,
+		"reported": reported,
+		"remaining_nrs": remaining_nrs,
+		"instalment": instalment,
+	}
+
+
+@frappe.whitelist()
+def get_payment_state(invoice):
+	"""Figures the Update NRS Payment dialog needs."""
+	inv = frappe.get_doc("Sales Invoice", invoice)
+	state = _state(inv)
+	state["irn"] = inv.get("custom_nrs_irn")
+	state["is_return"] = bool(inv.get("is_return"))
+	return state
+
 
 @frappe.whitelist()
 def push_payment_status(invoice, status, amount=None, reference=None):
-	invoice = frappe.get_doc("Sales Invoice", invoice)
-	if invoice.docstatus != 1:
+	inv = frappe.get_doc("Sales Invoice", invoice)
+	if inv.docstatus != 1:
 		frappe.throw(_("Submit the invoice before updating its NRS payment status."))
 
-	irn = invoice.get("custom_nrs_irn")
+	irn = inv.get("custom_nrs_irn")
 	if not irn:
-		frappe.throw(
-			_("Invoice {0} has no IRN. Push it to NRS first.").format(invoice.name)
-		)
+		frappe.throw(_("Invoice {0} has no IRN. Push it to NRS first.").format(inv.name))
 
 	status = (status or "").upper()
 	if status not in ("PARTIAL", "PAID"):
 		frappe.throw(_("Status must be PARTIAL or PAID."))
 
-	# The registry must mirror the accounting record: derive what ERPNext
-	# actually knows and refuse anything the invoice does not support.
-	outstanding = flt(invoice.get("outstanding_amount"))
-	grand_total = flt(invoice.get("grand_total"))
-	paid = grand_total - outstanding
+	state = _state(inv)
+	remaining = state["remaining_nrs"]
+
+	if remaining <= TOLERANCE:
+		frappe.throw(
+			_("NRS already holds the full amount for {0}; nothing left to report.").format(
+				inv.name
+			),
+			title=_("Already Reported"),
+		)
 
 	if status == "PAID":
-		if outstanding > 0.009:
+		if state["outstanding"] > TOLERANCE:
 			frappe.throw(
 				_(
 					"Invoice {0} still has {1} outstanding in ERPNext. Record the "
 					"payment first; NRS must not show PAID before the books do."
-				).format(invoice.name, frappe.format_value(outstanding, {"fieldtype": "Currency"})),
-				title=_("Payment Not Recorded"),
-			)
-	else:
-		amount = flt(amount)
-		if paid <= 0:
-			frappe.throw(
-				_("No payment is recorded against {0}; nothing to send as PARTIAL.").format(
-					invoice.name
+				).format(
+					inv.name,
+					frappe.format_value(state["outstanding"], {"fieldtype": "Currency"}),
 				),
 				title=_("Payment Not Recorded"),
 			)
-		if outstanding <= 0.009:
-			frappe.throw(
-				_("Invoice {0} is fully paid in ERPNext. Use PAID instead.").format(invoice.name),
-				title=_("Invoice Fully Paid"),
-			)
-		if amount <= 0:
-			frappe.throw(_("Enter the amount paid for a PARTIAL update."))
-		if amount > paid + 0.009:
+		amount = remaining
+	else:
+		if state["instalment"] <= TOLERANCE:
 			frappe.throw(
 				_(
-					"Amount {0} exceeds the {1} actually received against {2}."
+					"No new payment is recorded against {0}. Record the receipt first, "
+					"or use PAID if the balance is settled."
+				).format(inv.name),
+				title=_("Nothing New To Report"),
+			)
+		amount = flt(amount) or state["instalment"]
+		if amount > state["instalment"] + TOLERANCE:
+			frappe.throw(
+				_(
+					"Instalment {0} exceeds the {1} received since the last report "
+					"against {2}."
 				).format(
 					frappe.format_value(amount, {"fieldtype": "Currency"}),
-					frappe.format_value(paid, {"fieldtype": "Currency"}),
-					invoice.name,
+					frappe.format_value(state["instalment"], {"fieldtype": "Currency"}),
+					inv.name,
 				),
-				title=_("Amount Exceeds Payments"),
+				title=_("Amount Exceeds Receipts"),
+			)
+		if amount >= remaining - TOLERANCE:
+			frappe.throw(
+				_("Instalment {0} clears the remaining NRS balance {1}. Use PAID.").format(
+					frappe.format_value(amount, {"fieldtype": "Currency"}),
+					frappe.format_value(remaining, {"fieldtype": "Currency"}),
+				),
+				title=_("Use PAID"),
 			)
 
-	client = get_firs_client(invoice.company)
+	client = get_firs_client(inv.company)
 	try:
 		response = client.update_payment_status(
-			irn, status, amount=amount, reference=reference
+			irn, status, amount=amount if status == "PARTIAL" else None, reference=reference
 		)
 	except FIRSAPIError as e:
+		message = str(getattr(e, "response_body", None) or e)
+		# NRS marks an invoice terminal once it considers the balance settled.
+		# If the books agree, treat it as already reported instead of failing.
+		if "terminal state" in message and state["outstanding"] <= TOLERANCE:
+			frappe.db.set_value(
+				"Sales Invoice",
+				inv.name,
+				"custom_nrs_paid_reported",
+				state["total"],
+				update_modified=False,
+			)
+			return {
+				"irn": irn,
+				"status": "PAID",
+				"amount": remaining,
+				"reported": state["total"],
+				"already_terminal": True,
+			}
 		frappe.throw(
-			_("NRS rejected the payment update: {0}").format(
-				getattr(e, "response_body", None) or str(e)
-			),
+			_("NRS rejected the payment update: {0}").format(message),
 			title=_("NRS Payment Update"),
 		)
 
+	reported = state["reported"] + (amount if status == "PARTIAL" else remaining)
 	frappe.db.set_value(
 		"Sales Invoice",
-		invoice.name,
-		"custom_nrs_response",
-		frappe.as_json(
-			{
-				"payment_status_update": {
-					"status": status,
-					"amount": amount,
-					"reference": reference,
-					"response": response,
+		inv.name,
+		{
+			"custom_nrs_paid_reported": reported,
+			"custom_nrs_response": frappe.as_json(
+				{
+					"payment_status_update": {
+						"status": status,
+						"amount": amount,
+						"reference": reference,
+						"response": response,
+					}
 				}
-			}
-		),
+			),
+		},
 		update_modified=False,
 	)
 
-	return {"irn": irn, "status": status, "response": response}
+	return {"irn": irn, "status": status, "amount": amount, "reported": reported}

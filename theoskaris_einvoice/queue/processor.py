@@ -271,6 +271,14 @@ def _sync_payment_status_after_sign(client, inv, irn, stages):
 		client.update_payment_status(
 			irn, "PARTIAL", amount=paid, reference=f"AUTO {inv.name}"
 		)
+		# Track what NRS has been told so later updates send only new receipts
+		frappe.db.set_value(
+			"Sales Invoice",
+			inv.name,
+			"custom_nrs_paid_reported",
+			paid,
+			update_modified=False,
+		)
 		stages.append(
 			_make_stage("Payment Status", "Success", 0, "", f"PARTIAL {paid:,.2f}")
 		)
