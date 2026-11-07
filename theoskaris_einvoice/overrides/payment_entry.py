@@ -28,12 +28,40 @@ def _sync_reference_invoice(ref):
     outstanding = frappe.db.get_value(dt, dn, "outstanding_amount") or 0
     grand_total = frappe.db.get_value(dt, dn, "grand_total") or 0
 
-    client = get_firs_client(company)
-    if outstanding <= 0.009 and grand_total:
-        status, amount = "PAID", None
-    else:
-        status, amount = "PARTIAL", abs(ref.allocated_amount)
+    status = "PAID" if outstanding <= 0.009 and grand_total else "PARTIAL"
 
+    # Sales Invoices go through the shared endpoint: it derives the instalment,
+    # enforces the guards and records what NRS has been told. Purchase Invoices
+    # still use the client directly until the endpoint supports them.
+    if dt == "Sales Invoice":
+        from theoskaris_einvoice.api.payment_status import push_payment_status
+
+        try:
+            resp = push_payment_status(
+                dn,
+                status,
+                amount=abs(ref.allocated_amount) if status == "PARTIAL" else None,
+                reference=ref.parent,
+            )
+            frappe.logger("firs-einvoice").info(
+                {"event": "payment-status-synced", "invoice": dn, "irn": irn,
+                 "status": status, "response": resp}
+            )
+        except Exception as e:
+            message = str(e)
+            if "terminal state" in message or "already holds the full amount" in message:
+                frappe.logger("firs-einvoice").info(
+                    {"event": "payment-update-skipped-terminal", "invoice": dn, "irn": irn}
+                )
+                return
+            frappe.log_error(
+                title="FIRS payment status update failed",
+                message=f"Invoice {dn}, IRN {irn}: {message}",
+            )
+        return
+
+    client = get_firs_client(company)
+    amount = None if status == "PAID" else abs(ref.allocated_amount)
     try:
         resp = client.update_payment_status(
             irn, status, amount=amount, reference=ref.parent
