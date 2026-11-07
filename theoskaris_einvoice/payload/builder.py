@@ -467,7 +467,11 @@ def _build_tax_total(inv) -> list:
 		totals[key]["tax_amount"] += base
 		# Credit notes carry negative amounts; NRS requires the tax figures
 		# to be non-negative in the subtotal (the 380 type code conveys the sign).
-		totals[key]["taxable_amount"] += abs(_get_tax_base_for_row(tax, inv))
+		if key == "WITHHOLDING_TAX":
+			# WHT is computed on the net invoice value, not on a running total
+			totals[key]["taxable_amount"] += abs(flt(inv.net_total))
+		else:
+			totals[key]["taxable_amount"] += abs(_get_tax_base_for_row(tax, inv))
 
 	# Fallback when no taxes configured
 	if not totals:
@@ -533,6 +537,17 @@ def _resolve_tax_category(tax_row, inv=None, template_category: str = "") -> dic
 	Priority: NRS Tax Category on the template assigned to the invoice, then
 	description/account-head keyword matching, then standard VAT at the row rate.
 	"""
+	# A category on the tax row wins over the template: templates commonly mix
+	# VAT (STANDARD_VAT) with withholding (WITHHOLDING_TAX) rows.
+	row_category = (tax_row.get("custom_nrs_tax_category") or "").strip()
+	if row_category:
+		rate = abs(flt(tax_row.rate, 2))
+		if row_category != "STANDARD_VAT" and not rate:
+			rate = NRS_TAX_CATEGORIES.get(row_category, 0.0)
+		if not rate and row_category == "STANDARD_VAT":
+			rate = 7.5
+		return {"id": row_category, "percent": rate, "tax_scheme": {"id": "VAT"}}
+
 	if template_category:
 		rate = flt(tax_row.rate, 2)
 		if template_category != "STANDARD_VAT" and not rate:
