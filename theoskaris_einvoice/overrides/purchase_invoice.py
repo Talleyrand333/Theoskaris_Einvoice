@@ -8,6 +8,8 @@ import frappe
 
 from theoskaris_einvoice.payload.validators import (
 	FIRSValidationError,
+	has_placeholder_code,
+	unclassified_tax_rows,
 	assert_not_transmitted,
 	get_counterparty_address,
 	get_counterparty_email,
@@ -97,6 +99,13 @@ def _check_firs_ready(doc) -> bool:
 
 	# Invoice must have items
 	if not doc.items:
+		return False
+
+	for item in doc.items:
+		if has_placeholder_code(item.get("custom_firs_hsn_code")):
+			return False
+
+	if unclassified_tax_rows(doc):
 		return False
 
 	# All items must have HSN codes

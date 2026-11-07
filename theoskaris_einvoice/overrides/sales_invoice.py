@@ -8,6 +8,8 @@ import frappe
 
 from theoskaris_einvoice.payload.validators import (
 	FIRSValidationError,
+	has_placeholder_code,
+	unclassified_tax_rows,
 	assert_not_transmitted,
 	get_counterparty_address,
 	get_counterparty_email,
@@ -75,6 +77,28 @@ def validate(doc, method=None):
 			alert=True,
 		)
 
+	if unclassified_tax_rows(doc):
+		frappe.msgprint(
+			f"Tax rows without a valid NRS Tax Category: {', '.join(unclassified_tax_rows(doc))}. "
+			f"Use a category accepted by the provider (e.g. STANDARD_VAT, ZERO_VAT, SERVICE_TAX).",
+			title="FIRS Validation",
+			indicator="orange",
+			alert=True,
+		)
+
+	placeholder_rows = [
+		item.item_code for item in doc.items
+		if has_placeholder_code(item.get("custom_firs_hsn_code"))
+	]
+	if placeholder_rows:
+		frappe.msgprint(
+			f"Items with a placeholder NRS code (0000): {', '.join(placeholder_rows)}. "
+			f"Set the real HSN/ISIC code — NRS rejects 0000.",
+			title="FIRS Validation",
+			indicator="orange",
+			alert=True,
+		)
+
 	# Warn about missing HSN codes using frappe.alert (non-blocking)
 	missing_items = [
 		item.item_code for item in doc.items if not item.get("custom_firs_hsn_code")
@@ -117,6 +141,15 @@ def _check_firs_ready(doc) -> bool:
 	for item in doc.items:
 		if not item.get("custom_firs_hsn_code"):
 			return False
+
+	# NRS rejects 0000/0000.00 placeholder classification codes
+	for item in doc.items:
+		if has_placeholder_code(item.get("custom_firs_hsn_code")):
+			return False
+
+	# Every taxed row needs a category the provider accepts
+	if unclassified_tax_rows(doc):
+		return False
 
 	# Customer TIN is required — an invoice without it cannot be marked FIRS Ready.
 	if not get_counterparty_tin(doc):

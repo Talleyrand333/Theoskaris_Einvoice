@@ -181,3 +181,28 @@ def assert_not_transmitted(inv):
 			).format(inv.custom_nrs_irn),
 			title=_("FIRS Transmitted Invoice"),
 		)
+
+
+PLACEHOLDER_CODES = {"", "0000", "0000.00"}
+
+
+def has_placeholder_code(code) -> bool:
+	"""True when the NRS classification code is empty or a 0000 placeholder."""
+	return str(code or "").strip() in PLACEHOLDER_CODES
+
+
+def unclassified_tax_rows(inv):
+	"""Tax rows whose NRS category cannot be resolved to an accepted code."""
+	from theoskaris_einvoice.payload.builder import (
+		_get_template_tax_category,
+		_resolve_tax_category,
+	)
+
+	template_category = _get_template_tax_category(inv)
+	bad = []
+	for tax in inv.get("taxes") or []:
+		if not tax.tax_amount:
+			continue
+		if not _resolve_tax_category(tax, inv, template_category):
+			bad.append(tax.description or tax.account_head or "")
+	return bad

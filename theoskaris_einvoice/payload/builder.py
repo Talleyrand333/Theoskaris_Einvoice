@@ -455,6 +455,15 @@ def _build_tax_total(inv) -> list:
 		if not tax.tax_amount:
 			continue
 		category = _resolve_tax_category(tax, inv, template_category)
+		if not category:
+			frappe.throw(
+				frappe._(
+					"Tax row '{0}' on {1} has no valid NRS Tax Category. Set one on "
+					"the tax row (or its template) using a category accepted by the "
+					"provider before pushing to NRS."
+				).format(tax.description or tax.account_head, inv.name),
+				title=frappe._("NRS Tax Category Missing"),
+			)
 		key = category["id"]
 		if key not in totals:
 			totals[key] = {
@@ -473,20 +482,9 @@ def _build_tax_total(inv) -> list:
 		else:
 			totals[key]["taxable_amount"] += abs(_get_tax_base_for_row(tax, inv))
 
-	# Fallback when no taxes configured
+	# No taxes on the invoice: send no tax_total rather than inventing one.
 	if not totals:
-		if template_category:
-			percent = NRS_TAX_CATEGORIES.get(template_category, 0.0)
-			if template_category == "STANDARD_VAT" and not percent:
-				percent = 7.5
-			category = {"id": template_category, "percent": percent, "tax_scheme": {"id": "VAT"}}
-		else:
-			category = {"id": "STANDARD_VAT", "percent": 7.5, "tax_scheme": {"id": "VAT"}}
-		totals[category["id"]] = {
-			"taxable_amount": abs(flt(inv.net_total)),
-			"tax_amount": 0.0,
-			"category": category,
-		}
+		return []
 
 	tax_total = []
 	for bucket in totals.values():
@@ -507,12 +505,34 @@ def _build_tax_total(inv) -> list:
 
 
 # NRS tax category ids and their default VAT scheme.
+# Accepted tax categories per the provider's resource API
+# (GET /api/v3/resource/tax-categories). Values are default percentages only;
+# the payload always sends the row's own rate.
 NRS_TAX_CATEGORIES = {
 	"STANDARD_VAT": 7.5,
+	"REDUCED_VAT": 0.0,
 	"ZERO_VAT": 0.0,
-	"EXEMPT": 0.0,
-	"WITHHOLDING_TAX": 0.0,
-	"STAMP_DUTY": 0.0,
+	"STANDARD_GST": 0.0,
+	"REDUCED_GST": 0.0,
+	"ZERO_GST": 0.0,
+	"SERVICE_TAX": 0.0,
+	"LOCAL_SALES_TAX": 0.0,
+	"STATE_SALES_TAX": 0.0,
+	"LUXURY_TAX": 0.0,
+	"TOURISM_TAX": 0.0,
+	"EXPORT_DUTY": 0.0,
+	"IMPORT_DUTY": 0.0,
+	"ALCOHOL_EXCISE_TAX": 0.0,
+	"TOBACCO_EXCISE_TAX": 0.0,
+	"FUEL_EXCISE_TAX": 0.0,
+	"CARBON_TAX": 0.0,
+	"PLASTIC_TAX": 0.0,
+	"MEDICARE_TAX": 0.0,
+	"SOCIAL_SECURITY_TAX": 0.0,
+	"CORPORATE_INCOME_TAX": 0.0,
+	"PERSONAL_INCOME_TAX": 0.0,
+	"PERSONAL_PROPERTY_TAX": 0.0,
+	"REAL_ESTATE_TAX": 0.0,
 }
 
 
@@ -537,40 +557,44 @@ def _resolve_tax_category(tax_row, inv=None, template_category: str = "") -> dic
 	Priority: NRS Tax Category on the template assigned to the invoice, then
 	description/account-head keyword matching, then standard VAT at the row rate.
 	"""
-	# A category on the tax row wins over the template: templates commonly mix
-	# VAT (STANDARD_VAT) with withholding (WITHHOLDING_TAX) rows.
+	# A category on the tax row wins over the template: one template may hold
+	# several tax lines (VAT, service tax, duties).
 	row_category = (tax_row.get("custom_nrs_tax_category") or "").strip()
 	if row_category:
-		rate = abs(flt(tax_row.rate, 2))
-		if row_category != "STANDARD_VAT" and not rate:
-			rate = NRS_TAX_CATEGORIES.get(row_category, 0.0)
-		if not rate and row_category == "STANDARD_VAT":
-			rate = 7.5
-		return {"id": row_category, "percent": rate, "tax_scheme": {"id": "VAT"}}
+		if row_category not in NRS_TAX_CATEGORIES:
+			return None
+		return {
+			"id": row_category,
+			"percent": abs(flt(tax_row.rate, 2)),
+			"tax_scheme": {"id": "VAT"},
+		}
 
 	if template_category:
-		rate = flt(tax_row.rate, 2)
-		if template_category != "STANDARD_VAT" and not rate:
-			rate = NRS_TAX_CATEGORIES.get(template_category, 0.0)
-		if not rate and template_category == "STANDARD_VAT":
-			rate = 7.5
-		return {"id": template_category, "percent": rate, "tax_scheme": {"id": "VAT"}}
+		if template_category not in NRS_TAX_CATEGORIES:
+			return None
+		return {
+			"id": template_category,
+			"percent": abs(flt(tax_row.rate, 2)),
+			"tax_scheme": {"id": "VAT"},
+		}
 
 	# Try description first, then account head
 	search = (tax_row.description or tax_row.account_head or "").upper()
 	if "ZERO" in search:
-		return {"id": "ZERO_VAT", "percent": 0.0, "tax_scheme": {"id": "VAT"}}
-	if "EXEMPT" in search:
-		return {"id": "EXEMPT", "percent": 0.0, "tax_scheme": {"id": "VAT"}}
-	if "WITHHOLD" in search:
-		return {"id": "WITHHOLDING_TAX", "percent": 0.0, "tax_scheme": {"id": "VAT"}}
-	if "STAMP" in search:
-		return {"id": "STAMP_DUTY", "percent": 0.0, "tax_scheme": {"id": "VAT"}}
-	# Default to standard VAT at configured rate
-	rate = flt(tax_row.rate, 2)
-	if not rate:
-		rate = 7.5
-	return {"id": "STANDARD_VAT", "percent": rate, "tax_scheme": {"id": "VAT"}}
+		return {
+			"id": "ZERO_VAT",
+			"percent": abs(flt(tax_row.rate, 2)),
+			"tax_scheme": {"id": "VAT"},
+		}
+	if "SERVICE" in search:
+		return {
+			"id": "SERVICE_TAX",
+			"percent": abs(flt(tax_row.rate, 2)),
+			"tax_scheme": {"id": "VAT"},
+		}
+	# No silent default: an unclassified row must fail rather than be reported
+	# to NRS as standard VAT with an invented percentage.
+	return None
 
 
 def _get_tax_base_for_row(tax_row, inv) -> float:
