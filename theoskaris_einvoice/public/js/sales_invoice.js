@@ -60,6 +60,11 @@ function show_payment_dialog(frm, state) {
 					__("Already reported to NRS") + ": <b>" + money(state.reported) + "</b><br>" +
 					__("Remaining NRS balance") + ": <b>" + money(state.remaining_nrs) + "</b><br>" +
 					__("New receipts since last report") + ": <b>" + money(state.instalment) + "</b>" +
+					(state.over_reported
+						? '<div class="mt-2" style="color:#b45309"><b>' +
+						  __("NRS is holding more than ERPNext shows — a payment was likely cancelled after it was reported. Review before updating.") +
+						  "</b></div>"
+						: "") +
 					"</div>",
 			},
 			{

@@ -40,6 +40,8 @@ def get_payment_state(invoice):
 	state = _state(inv)
 	state["irn"] = inv.get("custom_nrs_irn")
 	state["is_return"] = bool(inv.get("is_return"))
+	# A cancelled payment can leave NRS holding more than the books show.
+	state["over_reported"] = state["reported"] > state["erp_paid"] + TOLERANCE
 	return state
 
 
