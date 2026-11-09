@@ -18,7 +18,7 @@
             "fieldtype": "Select",
             "in_list_view": 1,
             "label": "Stage",
-            "options": "Validate\nSign\nTransmit\nConfirm"
+            "options": "Validate\nSign\nTransmit\nConfirm\nQR\nPayment Status"
         },
         {
             "fieldname": "status",

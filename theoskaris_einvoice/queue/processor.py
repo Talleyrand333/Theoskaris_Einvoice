@@ -137,6 +137,12 @@ def process_queue_item(queue_name: str):
 		validate_ms = round(time.time() * 1000 - start, 2)
 		stages.append(_make_stage("Validate", "Success", validate_ms))
 		irn = _extract_irn(resp_validate) or payload.get("irn")
+		# Persist the IRN immediately: NRS has already registered the invoice
+		# at this point, so any later failure (transmit/confirm/QR) must not
+		# leave a signed-but-unrecorded invoice — that would make retries hit
+		# duplicate-IRN errors with no way to recover the IRN locally.
+		if irn:
+			inv.db_set("custom_nrs_irn", irn)
 
 		# Step 2: sign the validated invoice
 		start = time.time() * 1000
@@ -198,7 +204,14 @@ def process_queue_item(queue_name: str):
 		qr_code = None
 		qr_data_uri = None
 		if irn:
-			provider_qr, provider_uri = _extract_provider_qr(_response)
+			provider_qr, provider_uri = _extract_provider_qr(
+				{
+					"validate_response": resp_validate,
+					"sign_response": resp_sign,
+					"transmit_response": resp_transmit,
+					"confirm_response": resp_confirm,
+				}
+			)
 			if provider_uri:
 				qr_code, qr_data_uri = provider_qr, provider_uri
 				stages.append(_make_stage("QR", "Success", 0, "", "returned by provider in sign/validate response"))
@@ -221,6 +234,7 @@ def process_queue_item(queue_name: str):
 				try:
 					from theoskaris_einvoice.utils.qr_generator import generate_invoice_qr
 					qr_code, qr_data_uri = generate_invoice_qr(inv, irn)
+					stages.append(_make_stage("QR", "Success", 0, "", "local RSA generation (SI endpoint unavailable)"))
 				except Exception as e2:
 					frappe.log_error(
 						title="FIRS QR Generation Failed",
