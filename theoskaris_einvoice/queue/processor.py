@@ -63,6 +63,14 @@ def process_queue_item(queue_name: str):
 
 	stages = []
 
+	# Duplicate-submission guard: an invoice that already holds an IRN has
+	# been registered; re-running it triggers NRS DUPLICATE_IRN and pollutes
+	# the log. Mark completed instead of re-validating.
+	existing_irn = frappe.db.get_value(queue.document_type, queue.document_name, "custom_nrs_irn")
+	if existing_irn:
+		queue.mark_completed(response=json.dumps({"skipped": "already registered", "irn": existing_irn}))
+		return
+
 	def log_run(status, response_data, error_message=None, irn=None, total_ms=0):
 		return log_request(
 			document_type=queue.document_type,
@@ -190,6 +198,11 @@ def process_queue_item(queue_name: str):
 		qr_code = None
 		qr_data_uri = None
 		if irn:
+			provider_qr, provider_uri = _extract_provider_qr(_response)
+			if provider_uri:
+				qr_code, qr_data_uri = provider_qr, provider_uri
+				stages.append(_make_stage("QR", "Success", 0, "", "returned by provider in sign/validate response"))
+		if irn and not qr_data_uri:
 			issuance_date = str(inv.posting_date).replace("-", "")
 			certificate = frappe.db.get_value("Company", inv.company, "custom_firs_certificate") or None
 			try:
@@ -288,6 +301,40 @@ def _sync_payment_status_after_sign(client, inv, irn, stages):
 		)
 	except Exception as e:
 		stages.append(_make_stage("Payment Status", "Error", 0, "", str(e)[:200]))
+
+
+def _extract_provider_qr(response):
+	"""Pull a provider-returned QR from the validate/sign/confirm responses.
+
+	Providers on the documented v3 API return the NRS-signed QR directly in
+	the sign/validate response; that QR is the most MBS360-native one, so it
+	wins over the SI endpoint and local generation. Returns (payload, uri).
+	"""
+	if not isinstance(response, dict):
+		return None, None
+	blobs = [response]
+	for key in ("validate_response", "sign_response", "transmit_response", "confirm_response"):
+		nested = response.get(key)
+		if isinstance(nested, dict):
+			blobs.append(nested.get("data") if isinstance(nested.get("data"), dict) else nested)
+
+	def find(*keys):
+		for blob in blobs:
+			for key in keys:
+				value = blob.get(key)
+				if value:
+					return str(value)
+		return None
+
+	uri = find("qr_code_url", "qrCodeUrl", "qr_url", "qrUrl")
+	b64 = find("qr_code", "qrCode", "qr", "signed_qr", "signedQrCode")
+	if uri and uri.startswith("data:image"):
+		return b64, uri
+	if b64:
+		return b64, "data:image/png;base64," + b64
+	if uri:
+		return b64, uri
+	return None, None
 
 
 def _extract_irn(response) -> str | None:
