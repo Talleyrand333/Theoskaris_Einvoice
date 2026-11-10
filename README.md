@@ -1,6 +1,6 @@
 ### Theoskaris Einvoice
 
-FIRS e-Invoicing integration for ERPNext via eTranzact
+FIRS/NRS e-Invoicing integration for ERPNext (direct NRS integration)
 
 ### Installation
 

@@ -1,7 +1,7 @@
 app_name = "theoskaris_einvoice"
 app_title = "Theoskaris Einvoice"
 app_publisher = "Theoskaris"
-app_description = "FIRS e-Invoicing integration for ERPNext via eTranzact"
+app_description = "FIRS/NRS e-Invoicing integration for ERPNext (direct NRS integration)"
 app_email = "hello@theoskaris.com"
 app_license = "mit"
 
