@@ -699,17 +699,21 @@ def _generate_internal_irn(inv, company) -> str:
 	  {invoice_no}-{entity_seg2}{business_seg2}-{issue_date_YYYYMMDD}
 	All uppercase, only '-' special character allowed.
 	"""
-	# Extract IRN segment from Entity ID (service_id) + Business ID per dashboard template
-	entity_id = company.get("custom_firs_service_id") or ""
-	business_id = company.get("custom_firs_business_id") or ""
-
-	def _segment2(uuid_str: str) -> str:
-		parts = uuid_str.split("-")
-		return parts[1] if len(parts) >= 2 else ""
-
-	irn_segment = (_segment2(entity_id) + _segment2(business_id)).upper()
+	# IRN segment: the portal assigns a fixed 8-char segment per taxpayer
+	# (shown next to the API key on the portal). Prefer it when configured;
+	# derive from Entity ID + Business ID only as a fallback.
+	irn_segment = (company.get("custom_firs_irn_segment") or "").strip().upper()
 	if not irn_segment:
-		irn_segment = (company.get("custom_firs_service_id") or "").upper()
+		entity_id = company.get("custom_firs_service_id") or ""
+		business_id = company.get("custom_firs_business_id") or ""
+
+		def _segment2(uuid_str: str) -> str:
+			parts = uuid_str.split("-")
+			return parts[1] if len(parts) >= 2 else ""
+
+		irn_segment = (_segment2(entity_id) + _segment2(business_id)).upper()
+		if not irn_segment:
+			irn_segment = (company.get("custom_firs_service_id") or "").upper()
 
 	issuance = str(inv.posting_date).replace("-", "")
 	# Invoice number uppercased and safe
