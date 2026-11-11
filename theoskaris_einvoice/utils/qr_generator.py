@@ -40,18 +40,22 @@ def generate_qr_payload(irn: str, certificate: str, public_key_b64: str) -> str:
 	"""
 	if not public_key_b64:
 		raise ValueError("FIRS public key not configured on Company")
-	if not certificate:
-		# Certificate is optional per the eTranzact docs: without it the QR
-		# resolves to "Test Business" as the seller, which is acceptable in
-		# sandbox / Test Mode. Encrypt an empty string rather than failing.
-		certificate = ""
+	certificate = _normalize_certificate(certificate)
 
 	pem_bytes = base64.b64decode(public_key_b64)
 	public_key = load_pem_public_key(pem_bytes)
 
-	# NRS spec: the encrypted JSON is exactly {irn, certificate}. No timestamp.
+	# NRS sandbox (verified 2026-11-11 against verify_stamp): the irn value
+	# carries a unix-seconds suffix — "{IRN}.{unix_seconds}" — and the
+	# certificate is the decoded inner string. Plain-IRN payloads return
+	# "Failed to validate IRN"; double-encoded certificates return
+	# "UnKnown Issuer". With both correct, verify_stamp returns the IRN and
+	# the registered issuer.
+	import time
+
+	message = f"{irn}.{int(time.time())}"
 	payload = json.dumps(
-		{"irn": irn, "certificate": certificate},
+		{"irn": message, "certificate": certificate},
 		separators=(",", ":"),
 	).encode()
 
@@ -63,6 +67,29 @@ def generate_qr_payload(irn: str, certificate: str, public_key_b64: str) -> str:
 
 	encrypted = public_key.encrypt(payload, padding.PKCS1v15())
 	return base64.b64encode(encrypted).decode()
+
+
+def _normalize_certificate(certificate: str) -> str:
+	"""Return the certificate value NRS expects inside the QR payload.
+
+	crypto_keys.txt ships the certificate as base64 of the actual value; the
+	QR payload wants the decoded inner string. Verified live: the shipped
+	string yields "UnKnown Issuer", the decoded value validates (2026-11-11).
+	"""
+	if not certificate:
+		# Without the taxpayer certificate the QR cannot be resolved to this
+		# business by MBS360 — verify_stamp returns "IRN Or Certificate
+		# Missing". Keep it empty but callers should treat that as invalid.
+		return ""
+	trimmed = certificate.strip()
+	try:
+		decoded = base64.b64decode(trimmed).decode("utf-8")
+		if decoded.isprintable():
+			return decoded
+	except Exception:
+		pass
+	return trimmed
+
 
 
 def generate_qr_data_uri(qr_payload: str) -> str:
