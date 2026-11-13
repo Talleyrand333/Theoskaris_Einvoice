@@ -42,8 +42,7 @@ def generate_qr_payload(irn: str, certificate: str, public_key_b64: str) -> str:
 		raise ValueError("FIRS public key not configured on Company")
 	certificate = _normalize_certificate(certificate)
 
-	pem_bytes = base64.b64decode(public_key_b64)
-	public_key = load_pem_public_key(pem_bytes)
+	public_key = _load_public_key(public_key_b64)
 
 	# NRS sandbox (verified 2026-11-11 against verify_stamp): the irn value
 	# carries a unix-seconds suffix — "{IRN}.{unix_seconds}" — and the
@@ -67,6 +66,38 @@ def generate_qr_payload(irn: str, certificate: str, public_key_b64: str) -> str:
 
 	encrypted = public_key.encrypt(payload, padding.PKCS1v15())
 	return base64.b64encode(encrypted).decode()
+
+
+def _load_public_key(value: str):
+	"""Load an RSA public key from any shape the portal produces.
+
+	Accepted forms:
+	  - PEM text, with real or escaped newlines
+	  - base64 of PEM text (what crypto_keys.txt historically shipped)
+	  - bare base64 body without headers (common when copied out of
+	    the portal's JSON export)
+	"""
+	raw = (value or "").strip()
+	if not raw:
+		raise ValueError("FIRS public key not configured on Company")
+	raw = raw.replace("\\n", "\n")
+	if "BEGIN PUBLIC KEY" not in raw:
+		decoded = ""
+		try:
+			decoded = base64.b64decode(raw).decode()
+		except Exception:
+			decoded = ""
+		if "BEGIN PUBLIC KEY" in decoded:
+			raw = decoded
+		else:
+			body = "".join(raw.split())
+			lines = [body[i:i + 64] for i in range(0, len(body), 64)]
+			raw = (
+				"-----BEGIN PUBLIC KEY-----\n"
+				+ "\n".join(lines)
+				+ "\n-----END PUBLIC KEY-----\n"
+			)
+	return load_pem_public_key(raw.encode())
 
 
 def _normalize_certificate(certificate: str) -> str:

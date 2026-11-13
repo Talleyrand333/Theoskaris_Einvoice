@@ -1,9 +1,1 @@
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.egg-info/
-dist/
-build/
-.frappe/
+node_modules/
