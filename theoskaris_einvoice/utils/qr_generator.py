@@ -40,18 +40,18 @@ def generate_qr_payload(irn: str, certificate: str, public_key_b64: str) -> str:
 	"""
 	if not public_key_b64:
 		raise ValueError("FIRS public key not configured on Company")
-	certificate = _normalize_certificate(certificate)
+	# MBS360 expects the certificate exactly as crypto_keys.txt ships it.
+	# Decoding it (13c2bc6) made every QR scan "Invalid invoice" — the decoded
+	# value passes verify_stamp but the app rejects it. Don't decode.
+	certificate = (certificate or "").strip()
 
 	public_key = _load_public_key(public_key_b64)
 
-	# NRS sandbox (verified 2026-11-11 against verify_stamp): the irn value
-	# carries a unix-seconds suffix — "{IRN}.{unix_seconds}" — and the
-	# certificate is the decoded inner string. Plain-IRN payloads return
-	# "Failed to validate IRN"; double-encoded certificates return
-	# "UnKnown Issuer". With both correct, verify_stamp returns the IRN and
-	# the registered issuer.
+	# MBS360 (verified live 2026-11-19): the IRN carries a unix-seconds
+	# suffix and the certificate is the raw crypto_keys value. Using the
+	# decoded certificate (13c2bc6) passes verify_stamp but the MBS360 app
+	# rejects every scan with "Invalid invoice". Do not decode.
 	import time
-
 	message = f"{irn}.{int(time.time())}"
 	payload = json.dumps(
 		{"irn": message, "certificate": certificate},
