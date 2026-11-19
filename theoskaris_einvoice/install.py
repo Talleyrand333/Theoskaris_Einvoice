@@ -88,7 +88,7 @@ def create_firs_custom_fields():
 	then calls Frappe's create_custom_fields to idempotently
 	create or update them.
 	"""
-	with open(APP_DIR / "custom_field.json", "r") as f:
+	with open(APP_DIR / "custom_field.json", "r", encoding="utf-8") as f:
 		field_list = json.load(f)
 
 	grouped = {}
