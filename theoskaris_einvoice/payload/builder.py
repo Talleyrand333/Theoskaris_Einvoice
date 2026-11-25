@@ -6,6 +6,7 @@ import frappe
 from frappe.utils import flt, get_datetime
 
 from theoskaris_einvoice.payload.uom_map import UOM_NRS_CODE_MAP
+from theoskaris_einvoice.utils.nrs_tax_categories import NRS_TAX_CATEGORY_OPTIONS
 
 
 EMPTY_ADDRESS = {
@@ -443,205 +444,356 @@ def _item_is_stock(item_code: str) -> bool:
 
 
 def _build_tax_total(inv) -> list:
-	"""Build tax_total from invoice taxes grouped by NRS tax category.
+    """Build tax_total from invoice taxes grouped by NRS tax category.
 
-	The NRS category is read from the NRS Tax Category field on the Sales/Purchase
-	Taxes and Charges Template assigned to the invoice (template_category),
-	falling back to description/account-head matching for templates where it is unset.
-	"""
-	totals = {}
-	template_category = _get_template_tax_category(inv)
-	for tax in inv.taxes:
-		if not tax.tax_amount:
-			continue
-		category = _resolve_tax_category(tax, inv, template_category)
-		if not category:
-			frappe.throw(
-				frappe._(
-					"Tax row '{0}' on {1} has no valid NRS Tax Category. Set one on "
-					"the tax row (or its template) using a category accepted by the "
-					"provider before pushing to NRS."
-				).format(tax.description or tax.account_head, inv.name),
-				title=frappe._("NRS Tax Category Missing"),
-			)
-		# One subtotal per category and rate: NRS expects separate
-		# WITHHOLDING_TAX subtotals when several rates apply.
-		key = (category["id"], round(flt(category.get("percent")), 4))
-		if key not in totals:
-			totals[key] = {
-				"taxable_amount": 0.0,
-				"tax_amount": 0.0,
-				"category": category,
-			}
-		# Add tax amount; base is net total for this row
-		base = abs(flt(tax.base_tax_amount)) or abs(flt(tax.tax_amount))
-		totals[key]["tax_amount"] += base
-		# Credit notes carry negative amounts; NRS requires the tax figures
-		# to be non-negative in the subtotal (the 380 type code conveys the sign).
-		if category["id"] == "WITHHOLDING_TAX":
-			# WHT is computed on the net invoice value, not on a running total
-			totals[key]["taxable_amount"] += abs(flt(inv.net_total))
-		else:
-			totals[key]["taxable_amount"] += abs(_get_tax_base_for_row(tax, inv))
+    Amounts come from the tax rows' document-currency fields. ERPNext keeps
+    base_tax_amount in company currency, so using it while declaring the
+    invoice currency produced NGN figures inside USD payloads.
 
-	# No taxes on the invoice: send no tax_total rather than inventing one.
-	if not totals:
-		return []
+    Signed amounts are preserved: a withholding/deduction row is reported as
+    its own WITHHOLDING_TAX subtotal with a negative amount, so the sum of
+    tax_total reconciles with the invoice grand total. The previous abs()
+    merged a negative withholding row into the positive VAT bucket and
+    doubled the VAT.
+    """
+    totals = {}
+    template_category = _get_template_tax_category(inv)
+    sign = _document_sign(inv)
+    for tax in inv.taxes:
+        if str(tax.get("category") or "") == "Valuation":
+            # Valuation taxes are internal and never part of the payable total.
+            continue
+        if tax.get("included_in_print_rate"):
+            frappe.throw(
+                frappe._(
+                    "Tax row '{0}' on {1} is marked 'Is this Tax included in "
+                    "Basic Rate?'. NRS payloads need tax-exclusive amounts; "
+                    "disable that option or use a tax-exclusive template."
+                ).format(tax.description or tax.account_head, inv.name),
+                title=frappe._("NRS Tax-Inclusive Row"),
+            )
 
-	tax_total = []
-	for bucket in totals.values():
-		tax_total.append(
-			{
-				"tax_amount": flt(bucket["tax_amount"], 2),
-				"tax_subtotal": [
-					{
-						"taxable_amount": flt(bucket["taxable_amount"], 2),
-						"tax_amount": flt(bucket["tax_amount"], 2),
-						"tax_category": bucket["category"],
-						"tax_category_percent": bucket["category"]["percent"],
-					}
-				],
-			}
-		)
-	return tax_total
+        amount = _tax_row_amount(tax)
+        deduction = _is_tax_deduction(tax, amount, credit_note=sign < 0)
+        category = _resolve_tax_category(
+            tax, inv, template_category, deduction=deduction
+        )
+        if not category:
+            frappe.throw(
+                _missing_category_message(tax, inv, template_category, deduction),
+                title=frappe._("NRS Tax Category Missing"),
+            )
+
+        # A zero-amount row is still meaningful for zero-rated/exempt supply:
+        # it tells NRS why the taxable base carries no tax.
+        if not amount and category["id"] not in ZERO_RATE_CATEGORIES:
+            continue
+
+        normalized_amount = sign * (-abs(amount) if deduction else amount)
+        if (
+            category["id"] == "WITHHOLDING_TAX"
+            and normalized_amount > 0
+            and not inv.get("is_return")
+        ):
+            frappe.throw(
+                frappe._(
+                    "Tax row '{0}' on {1} is mapped to WITHHOLDING_TAX but "
+                    "increases the invoice total. Withholding must be a "
+                    "deduction (negative rate or Deduct) so payable_amount "
+                    "stays equal to the ERP grand total."
+                ).format(tax.description or tax.account_head, inv.name),
+                title=frappe._("NRS Withholding Tax Sign"),
+            )
+
+        # net_amount is the row's taxable base in document currency and is
+        # not cumulative. tax.total includes earlier taxes, so subtracting
+        # the row amount from it double-counted multi-rate invoices.
+        taxable = abs(flt(tax.get("net_amount")))
+        if not taxable:
+            percent = abs(flt(tax.get("rate")))
+            if percent:
+                taxable = abs(amount) * 100.0 / percent
+            else:
+                taxable = abs(flt(inv.get("net_total")))
+
+        key = (category["id"], round(flt(category.get("percent")), 4))
+        if key not in totals:
+            totals[key] = {
+                "taxable_amount": 0.0,
+                "tax_amount": 0.0,
+                "category": category,
+            }
+        totals[key]["tax_amount"] += normalized_amount
+        totals[key]["taxable_amount"] += taxable
+
+    # No taxes on the invoice: send no tax_total rather than inventing one.
+    if not totals:
+        return []
+
+    tax_total = []
+    for bucket in totals.values():
+        amount = flt(bucket["tax_amount"], 2)
+        taxable = flt(bucket["taxable_amount"], 2)
+        tax_total.append(
+            {
+                "tax_amount": amount,
+                "tax_subtotal": [
+                    {
+                        "taxable_amount": taxable,
+                        "tax_amount": amount,
+                        "tax_category": bucket["category"],
+                        "tax_category_percent": bucket["category"]["percent"],
+                    }
+                ],
+            }
+        )
+    return tax_total
 
 
 # NRS tax category ids and their default VAT scheme.
-# Accepted tax categories per the provider's resource API
-# (GET /api/v3/resource/tax-categories). Values are default percentages only;
-# the payload always sends the row's own rate.
-NRS_TAX_CATEGORIES = {
-	"STANDARD_VAT": 7.5,
-	"REDUCED_VAT": 0.0,
-	"ZERO_VAT": 0.0,
-	"STANDARD_GST": 0.0,
-	"REDUCED_GST": 0.0,
-	"ZERO_GST": 0.0,
-	"SERVICE_TAX": 0.0,
-	"LOCAL_SALES_TAX": 0.0,
-	"STATE_SALES_TAX": 0.0,
-	"LUXURY_TAX": 0.0,
-	"TOURISM_TAX": 0.0,
-	"EXPORT_DUTY": 0.0,
-	"IMPORT_DUTY": 0.0,
-	"ALCOHOL_EXCISE_TAX": 0.0,
-	"TOBACCO_EXCISE_TAX": 0.0,
-	"FUEL_EXCISE_TAX": 0.0,
-	"CARBON_TAX": 0.0,
-	"PLASTIC_TAX": 0.0,
-	"MEDICARE_TAX": 0.0,
-	"SOCIAL_SECURITY_TAX": 0.0,
-	"CORPORATE_INCOME_TAX": 0.0,
-	"PERSONAL_INCOME_TAX": 0.0,
-	"PERSONAL_PROPERTY_TAX": 0.0,
-	"REAL_ESTATE_TAX": 0.0,
-	# NRS support (community forum, WHT threads) requires withholding and
-	# exempt lines to carry these identifiers even though the provider's
-	# resource list omits them; the API accepts them.
-	"WITHHOLDING_TAX": 0.0,
-	"EXEMPT": 0.0,
-}
+# Membership comes from the shared field definition so Select options, the
+# installer patch and payload validation cannot drift. Values are default
+# percentages only; the payload always sends the row's own rate.
+NRS_TAX_CATEGORIES = dict.fromkeys(NRS_TAX_CATEGORY_OPTIONS, 0.0)
+NRS_TAX_CATEGORIES["STANDARD_VAT"] = 7.5
+
+# Categories that may legitimately carry a zero tax amount: they describe a
+# zero-rated or exempt supply and still need a subtotal.
+ZERO_RATE_CATEGORIES = frozenset({"ZERO_VAT", "ZERO_GST", "EXEMPTED"})
+
+# Legacy Select values written by earlier versions of this app. EXEMPT was
+# never an NRS tax category; the documented identifier is EXEMPTED.
+_TAX_CATEGORY_ALIASES = {"EXEMPT": "EXEMPTED"}
+
+
+def _normalize_tax_category(value) -> str:
+    code = str(value or "").strip().upper()
+    return _TAX_CATEGORY_ALIASES.get(code, code)
+
+
+def _tax_row_amount(tax_row) -> float:
+    """Tax amount in document currency, after any invoice-level discount."""
+    return flt(tax_row.get("tax_amount_after_discount_amount"))
+
+
+def _is_tax_deduction(tax_row, amount=None, credit_note=False) -> bool:
+    """True when the tax row reduces the invoice total.
+
+    On a credit note every amount is negative because of the document
+    direction, not because the row is a deduction. Only an explicit Deduct
+    flag or a negative rate makes a credit-note row a deduction.
+    """
+    if str(tax_row.get("add_deduct_tax") or "").strip().lower() == "deduct":
+        return True
+    if flt(tax_row.get("rate")) < 0:
+        return True
+    if credit_note:
+        return False
+    if amount is None:
+        amount = _tax_row_amount(tax_row)
+    return flt(amount) < 0
+
+
+def _document_sign(inv) -> float:
+    """+1 for an invoice, -1 for a credit note.
+
+    The 380 type code conveys the credit-note direction, so monetary fields
+    are sent as positive magnitudes.
+    """
+    if inv.get("is_return"):
+        return -1.0
+    return -1.0 if flt(inv.get("grand_total")) < 0 else 1.0
+
+
+def _tax_category_from_description(tax_row) -> str:
+    """Map tax-row wording to an NRS category.
+
+    Only specific markers match. A generic "VAT" is deliberately ignored so
+    an unset template fails validation instead of being guessed as standard
+    VAT.
+    """
+    search = "{} {}".format(
+        tax_row.get("description") or "", tax_row.get("account_head") or ""
+    ).upper()
+    if any(marker in search for marker in ("WITHHOLD", "WHT", "WITHHELD")):
+        return "WITHHOLDING_TAX"
+    if "STAMP" in search and "DUTY" in search:
+        return "STAMP_DUTY"
+    if "EXEMPT" in search:
+        return "EXEMPTED"
+    if "ZERO" in search:
+        return "ZERO_GST" if "GST" in search else "ZERO_VAT"
+    if "REDUCED" in search and "GST" in search:
+        return "REDUCED_GST"
+    if "REDUCED" in search and "VAT" in search:
+        return "REDUCED_VAT"
+    if "SERVICE" in search and "TAX" in search:
+        return "SERVICE_TAX"
+    if "LOCAL" in search and "SALES" in search:
+        return "LOCAL_SALES_TAX"
+    if "STATE" in search and "SALES" in search:
+        return "STATE_SALES_TAX"
+    if "LUXURY" in search:
+        return "LUXURY_TAX"
+    if "TOURISM" in search:
+        return "TOURISM_TAX"
+    if "CARBON" in search:
+        return "CARBON_TAX"
+    if "PLASTIC" in search:
+        return "PLASTIC_TAX"
+    if "IMPORT" in search and "DUTY" in search:
+        return "IMPORT_DUTY"
+    if "EXPORT" in search and "DUTY" in search:
+        return "EXPORT_DUTY"
+    return ""
+
+
+def _tax_category(code: str, tax_row) -> dict:
+    return {
+        "id": code,
+        "percent": flt(abs(flt(tax_row.get("rate"))), 2),
+    }
+
+
+def _missing_category_message(tax_row, inv, template_category, deduction) -> str:
+    row_value = str(tax_row.get("custom_nrs_tax_category") or "").strip()
+    template_value = str(template_category or "").strip()
+    label = tax_row.get("description") or tax_row.get("account_head") or ""
+
+    if row_value and _normalize_tax_category(row_value) not in NRS_TAX_CATEGORIES:
+        return frappe._(
+            "Tax row '{0}' on {1} uses NRS Tax Category '{2}', which the "
+            "provider does not accept. Choose one of: {3}."
+        ).format(label, inv.name, row_value, ", ".join(NRS_TAX_CATEGORY_OPTIONS))
+
+    if template_value and _normalize_tax_category(template_value) not in NRS_TAX_CATEGORIES:
+        return frappe._(
+            "The taxes and charges template on {0} uses NRS Tax Category "
+            "'{1}', which the provider does not accept. Set a supported "
+            "category on the template or on tax row '{2}'."
+        ).format(inv.name, template_value, label)
+
+    if deduction and row_value:
+        return frappe._(
+            "Tax row '{0}' on {1} reduces the invoice total but its NRS Tax "
+            "Category is '{2}'. Set it to WITHHOLDING_TAX so the deduction "
+            "is reported separately from VAT."
+        ).format(label, inv.name, row_value)
+
+    if deduction:
+        resolved = _normalize_tax_category(
+            _tax_category_from_description(tax_row) or template_value
+        )
+        return frappe._(
+            "Tax row '{0}' on {1} reduces the invoice total but resolves to "
+            "NRS Tax Category '{2}'. Set NRS Tax Category to WITHHOLDING_TAX "
+            "on that row, or remove the deduction, before pushing to NRS."
+        ).format(label, inv.name, resolved or "none")
+
+    return frappe._(
+        "Tax row '{0}' on {1} has no valid NRS Tax Category. Set one on the "
+        "tax row (or its template) using a category accepted by the provider "
+        "before pushing to NRS."
+    ).format(label, inv.name)
 
 
 def _get_template_tax_category(inv) -> str:
-	"""Read NRS Tax Category from the Taxes and Charges Template on the invoice."""
-	template = inv.get("taxes_and_charges")
-	if not template:
-		return ""
-	template_doctype = (
-		"Purchase Taxes and Charges Template"
-		if inv.doctype == "Purchase Invoice"
-		else "Sales Taxes and Charges Template"
-	)
-	if not frappe.db.exists(template_doctype, template):
-		return ""
-	return (frappe.db.get_value(template_doctype, template, "custom_nrs_tax_category") or "").strip()
+    """Read NRS Tax Category from the Taxes and Charges Template on the invoice."""
+    template = inv.get("taxes_and_charges")
+    if not template:
+        return ""
+    template_doctype = (
+        "Purchase Taxes and Charges Template"
+        if inv.doctype == "Purchase Invoice"
+        else "Sales Taxes and Charges Template"
+    )
+    if not frappe.db.exists(template_doctype, template):
+        return ""
+    return (frappe.db.get_value(template_doctype, template, "custom_nrs_tax_category") or "").strip()
 
 
-def _resolve_tax_category(tax_row, inv=None, template_category: str = "") -> dict:
-	"""Resolve a tax row to an NRS Tax Category.
+def _resolve_tax_category(tax_row, inv=None, template_category: str = "", deduction=None) -> dict:
+    """Resolve a tax row to an NRS Tax Category.
 
-	Priority: NRS Tax Category on the template assigned to the invoice, then
-	description/account-head keyword matching, then standard VAT at the row rate.
-	"""
-	# A category on the tax row wins over the template: one template may hold
-	# several tax lines (VAT, service tax, duties).
-	row_category = (tax_row.get("custom_nrs_tax_category") or "").strip()
-	if row_category:
-		if row_category not in NRS_TAX_CATEGORIES:
-			return None
-		return {
-			"id": row_category,
-			"percent": abs(flt(tax_row.rate, 2)),
-			"tax_scheme": {"id": "VAT"},
-		}
+    Priority: explicit row category, then specific wording (withholding,
+    stamp duty, zero/exempt), then the invoice template's category. A
+    deduction may only resolve to WITHHOLDING_TAX; silently reporting a
+    negative row under VAT would inflate the tax and break the payable total.
+    """
+    if deduction is None:
+        deduction = _is_tax_deduction(tax_row)
 
-	if template_category:
-		if template_category not in NRS_TAX_CATEGORIES:
-			return None
-		return {
-			"id": template_category,
-			"percent": abs(flt(tax_row.rate, 2)),
-			"tax_scheme": {"id": "VAT"},
-		}
+    row_category = _normalize_tax_category(tax_row.get("custom_nrs_tax_category"))
+    if row_category:
+        if row_category not in NRS_TAX_CATEGORIES:
+            return None
+        if deduction and row_category != "WITHHOLDING_TAX":
+            return None
+        return _tax_category(row_category, tax_row)
 
-	# Try description first, then account head
-	search = (tax_row.description or tax_row.account_head or "").upper()
-	if "ZERO" in search:
-		return {
-			"id": "ZERO_VAT",
-			"percent": abs(flt(tax_row.rate, 2)),
-			"tax_scheme": {"id": "VAT"},
-		}
-	if "SERVICE" in search:
-		return {
-			"id": "SERVICE_TAX",
-			"percent": abs(flt(tax_row.rate, 2)),
-			"tax_scheme": {"id": "VAT"},
-		}
-	# No silent default: an unclassified row must fail rather than be reported
-	# to NRS as standard VAT with an invented percentage.
-	return None
+    description_category = _normalize_tax_category(
+        _tax_category_from_description(tax_row)
+    )
+    if description_category:
+        if description_category not in NRS_TAX_CATEGORIES:
+            return None
+        if deduction and description_category != "WITHHOLDING_TAX":
+            return None
+        return _tax_category(description_category, tax_row)
 
+    template_category = _normalize_tax_category(template_category)
+    if template_category:
+        if template_category not in NRS_TAX_CATEGORIES:
+            return None
+        if deduction and template_category != "WITHHOLDING_TAX":
+            return None
+        return _tax_category(template_category, tax_row)
 
-def _get_tax_base_for_row(tax_row, inv) -> float:
-	"""Estimate taxable base for a tax row."""
-	if tax_row.total:
-		return abs(flt(tax_row.total)) - abs(flt(tax_row.tax_amount_after_discount_amount or 0))
-	return flt(inv.net_total)
+    # No silent default: an unclassified row must fail rather than be
+    # reported to NRS as standard VAT with an invented percentage.
+    return None
 
 
 def _build_legal_monetary_total(inv, tax_total) -> dict:
-	"""Build legal_monetary_total block.
+    """Build legal_monetary_total from ERPNext's document-currency totals.
 
-	Credit notes have negative totals in ERPNext, but FIRS requires
-	all monetary values to be >= 0. Use abs() for safety.
-	"""
-	line_ext = abs(flt(inv.net_total))
+    The e-invoice must state the same amounts the accounting system holds.
+    Recomputing them from tax rows introduced currency and double-counting
+    errors; this block uses net_total/grand_total and fails loudly if the
+    tax breakdown does not reconcile with them.
+    """
+    line_ext = flt(abs(flt(inv.get("net_total"))), 2)
+    tax_amount = flt(
+        sum(flt(total.get("tax_amount")) for total in tax_total), 2
+    )
+    grand_total = flt(abs(flt(inv.get("grand_total"))), 2)
+    if not grand_total and not line_ext:
+        grand_total = flt(line_ext + tax_amount, 2)
 
-	# WHT is reported as its own TaxSubtotal (NRS requirement) but it is money
-	# withheld at source, not money the buyer pays — so it reduces the payable
-	# amount instead of increasing it. This keeps payable == invoice grand total.
-	withheld = 0.0
-	added = 0.0
-	for total in tax_total:
-		for sub in total.get("tax_subtotal") or []:
-			amount = flt(sub.get("tax_amount"))
-			if (sub.get("tax_category") or {}).get("id") == "WITHHOLDING_TAX":
-				withheld += amount
-			else:
-				added += amount
+    expected = flt(line_ext + tax_amount, 2)
+    if abs(expected - grand_total) > 0.02:
+        frappe.throw(
+            frappe._(
+                "Tax totals for {0} do not reconcile in {1}: line extension "
+                "{2} + tax {3} = {4}, but the invoice grand total is {5}. "
+                "Correct the tax rows before pushing to NRS."
+            ).format(
+                inv.name,
+                inv.get("currency") or "",
+                line_ext,
+                tax_amount,
+                expected,
+                grand_total,
+            ),
+            title=frappe._("NRS Tax Total Mismatch"),
+        )
 
-	tax_exclusive = line_ext
-	tax_inclusive = tax_exclusive + added - withheld
-	return {
-		"line_extension_amount": line_ext,
-		"tax_exclusive_amount": tax_exclusive,
-		"tax_inclusive_amount": tax_inclusive,
-		"payable_amount": tax_inclusive,
-	}
-
-
+    return {
+        "line_extension_amount": line_ext,
+        "tax_exclusive_amount": line_ext,
+        "tax_inclusive_amount": grand_total,
+        "payable_amount": grand_total,
+    }
 def _get_payment_status(inv) -> str:
 	"""Derive NRS payment_status from the invoice's own payment state.
 

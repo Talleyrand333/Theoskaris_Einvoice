@@ -2,6 +2,7 @@
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 from theoskaris_einvoice.utils.settings import is_firs_enabled_for
 
@@ -195,14 +196,21 @@ def unclassified_tax_rows(inv):
 	"""Tax rows whose NRS category cannot be resolved to an accepted code."""
 	from theoskaris_einvoice.payload.builder import (
 		_get_template_tax_category,
+		_is_tax_deduction,
 		_resolve_tax_category,
+		_tax_row_amount,
 	)
 
 	template_category = _get_template_tax_category(inv)
 	bad = []
 	for tax in inv.get("taxes") or []:
-		if not tax.tax_amount:
+		if str(tax.get("category") or "") == "Valuation":
 			continue
-		if not _resolve_tax_category(tax, inv, template_category):
+		amount = _tax_row_amount(tax)
+		credit_note = bool(inv.get("is_return")) or flt(inv.get("grand_total")) < 0
+		deduction = _is_tax_deduction(tax, amount, credit_note=credit_note)
+		if not _resolve_tax_category(
+			tax, inv, template_category, deduction=deduction
+		):
 			bad.append(tax.description or tax.account_head or "")
 	return bad
