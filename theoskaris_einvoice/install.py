@@ -6,6 +6,8 @@ from pathlib import Path
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
+from theoskaris_einvoice.utils.nrs_tax_categories import ensure_nrs_tax_category_fields
+
 APP_DIR = Path(__file__).resolve().parent
 
 # Layout fieldtypes have no DB column; switching between them is metadata-only.
@@ -52,8 +54,11 @@ def after_install():
 	frappe.clear_cache(doctype="FIRS Settings")
 	_create_firs_settings()
 	create_firs_custom_fields()
-	# Seed UOM codes now that the custom field exists (patches run before
-	# after_install on fresh installs).
+	# Fresh installs mark patches complete before after_install runs, so the
+	# v1_3 patch never executes here. Do the same setup directly.
+	ensure_nrs_tax_category_fields(add_missing_options=True)
+	# Seed UOM codes now that the custom field exists (fresh installs mark
+	# patches complete before after_install runs).
 	from theoskaris_einvoice.patches.v1_2.seed_nrs_uom_codes import _seed_uom_codes
 
 	_seed_uom_codes()
@@ -62,6 +67,9 @@ def after_install():
 def after_migrate():
 	"""Re-apply custom fields on migrate (handles field additions/changes)."""
 	create_firs_custom_fields()
+	# Recreate the row fields if they were deleted, but never rewrite an
+	# existing field: the v1_3 patch already widened stale options once.
+	ensure_nrs_tax_category_fields(add_missing_options=False)
 	# Upgrade sites run the UOM seed patch before this hook creates the
 	# column (patches run first), so the patch silently skips there. Re-seed;
 	# _seed_uom_codes is idempotent and never overwrites existing values.
