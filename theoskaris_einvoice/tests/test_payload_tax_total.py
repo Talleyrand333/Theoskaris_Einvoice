@@ -180,19 +180,16 @@ class TaxTotalTest(unittest.TestCase):
         legal = builder._build_legal_monetary_total(inv, result)
         self.assertAlmostEqual(legal["line_extension_amount"], 122216.10, places=2)
         self.assertAlmostEqual(legal["tax_exclusive_amount"], 122216.10, places=2)
-        # Gross invoice value: line + VAT + WHT, as NRS signed on SINV-00558.
-        self.assertAlmostEqual(legal["tax_inclusive_amount"], 140548.52, places=2)
-        self.assertAlmostEqual(legal["payable_amount"], 140548.52, places=2)
-        # ERPNext still receives the net-of-WHT amount; the two differ by 2xWHT.
-        self.assertAlmostEqual(
-            legal["tax_inclusive_amount"] - 2 * 9166.21, 122216.10, places=2
-        )
+        # Invoiced gross is line + VAT; WHT is withheld from the payment.
+        self.assertAlmostEqual(legal["tax_inclusive_amount"], 131382.31, places=2)
+        self.assertAlmostEqual(legal["payable_amount"], 122216.10, places=2)
+        self.assertAlmostEqual(legal["payable_amount"], abs(inv.grand_total), places=2)
 
-    def test_usd_1000_vat_75_wht_50_matches_signed_nrs_shape(self):
+    def test_usd_1000_vat_75_wht_50_payable_matches_erp(self):
         # invoice_number00002 on test-theoskaris: net 1,000 USD, VAT +75,
         # WHT -50, ERP grand total 1,025. FIRS-LOG-2026-00063 rejected the
-        # negative WHT representation; SINV-00558 was signed by NRS with a
-        # positive WHT and payable_amount equal to the gross invoice value.
+        # negative WHT representation. WHT is disclosed as a positive tax
+        # component, but the NRS payable stays the ERP payable.
         vat = make_tax(
             description="VAT @ 7.5%",
             rate=7.5,
@@ -221,14 +218,20 @@ class TaxTotalTest(unittest.TestCase):
         self.assertEqual(wht_sub["tax_category"]["id"], "WITHHOLDING_TAX")
         self.assertAlmostEqual(wht_sub["tax_category_percent"], 5.0, places=2)
 
-        # NRS payload arithmetic: 1,000 + 75 + 50 = 1,125.
+        # Invoiced gross: 1,000 + 75 = 1,075. WHT is withheld from payment.
         self.assertAlmostEqual(legal["line_extension_amount"], 1000.0, places=2)
         self.assertAlmostEqual(legal["tax_exclusive_amount"], 1000.0, places=2)
-        self.assertAlmostEqual(legal["tax_inclusive_amount"], 1125.0, places=2)
-        self.assertAlmostEqual(legal["payable_amount"], 1125.0, places=2)
+        self.assertAlmostEqual(legal["tax_inclusive_amount"], 1075.0, places=2)
 
-        # ERPNext receivable: 1,125 - 2 x 50 = 1,025 grand total.
-        self.assertAlmostEqual(legal["tax_inclusive_amount"] - 2 * 50.0, 1025.0, places=2)
+        # NRS payable must match the ERP payable in document currency.
+        self.assertAlmostEqual(legal["payable_amount"], 1025.0, places=2)
+        self.assertEqual(legal["payable_amount"], inv.grand_total)
+
+        # tax_total carries the WHT component for disclosure; it is not an
+        # extra charge on top of the invoice.
+        self.assertAlmostEqual(
+            legal["tax_inclusive_amount"] - legal["payable_amount"], 50.0, places=2
+        )
 
         # Every number NRS receives in a tax element is non-negative.
         for total in result:

@@ -763,16 +763,18 @@ def _resolve_tax_category(tax_row, inv=None, template_category: str = "", deduct
 def _build_legal_monetary_total(inv, tax_total) -> dict:
     """Build legal_monetary_total from ERPNext's document-currency totals.
 
-    NRS tax_inclusive_amount is the gross invoice value: line extension plus
-    every tax component, withholding included. The provider's accepted WHT
-    invoices (SINV-00558/559) were signed with payable_amount equal to that
-    gross figure, so the payload keeps the same representation.
+    tax_inclusive_amount is the invoiced gross before withholding: line
+    extension plus the taxes actually added to the charge. WHT is reported
+    as a non-negative TaxTotal component, but it is withheld from the
+    payment rather than added to the invoice, so it is excluded from
+    tax_inclusive_amount.
 
-    ERPNext's grand_total is the net receivable when WHT is deducted at
-    source (line + non-withheld tax - WHT). That difference is a settlement
-    matter, not a second payable in the e-invoice. The check below still
-    reconciles both worlds and fails if the tax rows cannot produce the
-    accounting grand total.
+    payable_amount is what the buyer actually pays: tax inclusive less the
+    withholding. It must equal ERPNext's grand_total in document currency.
+    The NRS schema exposes no separate withholding or settlement field, so a
+    positive WITHHOLDING_TAX component plus a net payable is the documented
+    representation. This also fails loudly if the tax rows cannot produce
+    the accounting grand total.
     """
     line_ext = flt(abs(flt(inv.get("net_total"))), 2)
     tax_amount = flt(
@@ -789,28 +791,28 @@ def _build_legal_monetary_total(inv, tax_total) -> dict:
         ),
         2,
     )
-    gross_total = flt(line_ext + tax_amount, 2)
+    non_withholding_tax = flt(tax_amount - withholding, 2)
+    tax_inclusive = flt(line_ext + non_withholding_tax, 2)
+    payable = flt(tax_inclusive - withholding, 2)
     grand_total = flt(abs(flt(inv.get("grand_total"))), 2)
     if not grand_total and not line_ext:
-        grand_total = gross_total
+        grand_total = payable
 
-    # WHT is reported as a positive tax amount, but ERPNext subtracts it from
-    # the receivable: gross - 2 * withholding == line + VAT - WHT.
-    accounting_payable = flt(gross_total - 2 * withholding, 2)
-    if abs(accounting_payable - grand_total) > 0.02:
+    if abs(payable - grand_total) > 0.02:
         frappe.throw(
             frappe._(
                 "Tax totals for {0} do not reconcile in {1}: line extension "
-                "{2}, tax components {3} (withholding {4}), so the receivable "
-                "is {5}, but the invoice grand total is {6}. Correct the tax "
-                "rows before pushing to NRS."
+                "{2}, non-withheld tax {3}, withholding {4}, so tax inclusive "
+                "is {5} and payable is {6}, but the invoice grand total is "
+                "{7}. Correct the tax rows before pushing to NRS."
             ).format(
                 inv.name,
                 inv.get("currency") or "",
                 line_ext,
-                tax_amount,
+                non_withholding_tax,
                 withholding,
-                accounting_payable,
+                tax_inclusive,
+                payable,
                 grand_total,
             ),
             title=frappe._("NRS Tax Total Mismatch"),
@@ -819,8 +821,8 @@ def _build_legal_monetary_total(inv, tax_total) -> dict:
     return {
         "line_extension_amount": line_ext,
         "tax_exclusive_amount": line_ext,
-        "tax_inclusive_amount": gross_total,
-        "payable_amount": gross_total,
+        "tax_inclusive_amount": tax_inclusive,
+        "payable_amount": payable,
     }
 def _get_payment_status(inv) -> str:
 	"""Derive NRS payment_status from the invoice's own payment state.
