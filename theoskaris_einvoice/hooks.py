@@ -16,6 +16,8 @@ doctype_js = {
 	"Sales Invoice": "public/js/sales_invoice.js",
 	"Purchase Invoice": "public/js/purchase_invoice.js",
 	"FIRS Invoice Upload": "public/js/firs_invoice_upload.js",
+	"FIRS Queue": "public/js/firs_read_only.js",
+	"FIRS Log": "public/js/firs_read_only.js",
 }
 doctype_list_js = {
 	"Sales Invoice": "public/js/sales_invoice_list.js",
