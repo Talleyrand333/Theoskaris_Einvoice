@@ -168,9 +168,10 @@ class TaxTotalTest(unittest.TestCase):
         self.assertEqual(len(result), 2)
         self.assertAlmostEqual(by_category["STANDARD_VAT"]["tax_amount"], 9166.21, places=2)
         self.assertAlmostEqual(by_category["STANDARD_VAT"]["taxable_amount"], 122216.10, places=2)
-        self.assertAlmostEqual(by_category["WITHHOLDING_TAX"]["tax_amount"], -9166.21, places=2)
+        self.assertAlmostEqual(by_category["WITHHOLDING_TAX"]["tax_amount"], 9166.21, places=2)
         self.assertAlmostEqual(by_category["WITHHOLDING_TAX"]["taxable_amount"], 122216.10, places=2)
-        self.assertAlmostEqual(sum(t["tax_amount"] for t in result), 0.0, places=2)
+        # NRS rejects negative tax amounts; both components are magnitudes.
+        self.assertAlmostEqual(sum(t["tax_amount"] for t in result), 18332.42, places=2)
 
         # The NGN base amounts must never leak into a USD payload.
         for total in result:
@@ -179,8 +180,63 @@ class TaxTotalTest(unittest.TestCase):
         legal = builder._build_legal_monetary_total(inv, result)
         self.assertAlmostEqual(legal["line_extension_amount"], 122216.10, places=2)
         self.assertAlmostEqual(legal["tax_exclusive_amount"], 122216.10, places=2)
-        self.assertAlmostEqual(legal["tax_inclusive_amount"], 122216.10, places=2)
-        self.assertAlmostEqual(legal["payable_amount"], 122216.10, places=2)
+        # Gross invoice value: line + VAT + WHT, as NRS signed on SINV-00558.
+        self.assertAlmostEqual(legal["tax_inclusive_amount"], 140548.52, places=2)
+        self.assertAlmostEqual(legal["payable_amount"], 140548.52, places=2)
+        # ERPNext still receives the net-of-WHT amount; the two differ by 2xWHT.
+        self.assertAlmostEqual(
+            legal["tax_inclusive_amount"] - 2 * 9166.21, 122216.10, places=2
+        )
+
+    def test_usd_1000_vat_75_wht_50_matches_signed_nrs_shape(self):
+        # invoice_number00002 on test-theoskaris: net 1,000 USD, VAT +75,
+        # WHT -50, ERP grand total 1,025. FIRS-LOG-2026-00063 rejected the
+        # negative WHT representation; SINV-00558 was signed by NRS with a
+        # positive WHT and payable_amount equal to the gross invoice value.
+        vat = make_tax(
+            description="VAT @ 7.5%",
+            rate=7.5,
+            amount=75.0,
+            net_amount=1000.0,
+            category="STANDARD_VAT",
+        )
+        wht = make_tax(
+            description="WHT @ 5%",
+            rate=-5.0,
+            amount=-50.0,
+            net_amount=1000.0,
+            category="WITHHOLDING_TAX",
+        )
+        inv = make_invoice(1000.0, 1025.0, [vat, wht], currency="USD")
+
+        result = builder._build_tax_total(inv)
+        legal = builder._build_legal_monetary_total(inv, result)
+
+        self.assertEqual(len(result), 2)
+        self.assertAlmostEqual(result[0]["tax_amount"], 75.0, places=2)
+        self.assertAlmostEqual(result[1]["tax_amount"], 50.0, places=2)
+        wht_sub = result[1]["tax_subtotal"][0]
+        self.assertAlmostEqual(wht_sub["tax_amount"], 50.0, places=2)
+        self.assertAlmostEqual(wht_sub["taxable_amount"], 1000.0, places=2)
+        self.assertEqual(wht_sub["tax_category"]["id"], "WITHHOLDING_TAX")
+        self.assertAlmostEqual(wht_sub["tax_category_percent"], 5.0, places=2)
+
+        # NRS payload arithmetic: 1,000 + 75 + 50 = 1,125.
+        self.assertAlmostEqual(legal["line_extension_amount"], 1000.0, places=2)
+        self.assertAlmostEqual(legal["tax_exclusive_amount"], 1000.0, places=2)
+        self.assertAlmostEqual(legal["tax_inclusive_amount"], 1125.0, places=2)
+        self.assertAlmostEqual(legal["payable_amount"], 1125.0, places=2)
+
+        # ERPNext receivable: 1,125 - 2 x 50 = 1,025 grand total.
+        self.assertAlmostEqual(legal["tax_inclusive_amount"] - 2 * 50.0, 1025.0, places=2)
+
+        # Every number NRS receives in a tax element is non-negative.
+        for total in result:
+            self.assertGreaterEqual(total["tax_amount"], 0.0)
+            for sub in total["tax_subtotal"]:
+                self.assertGreaterEqual(sub["tax_amount"], 0.0)
+                self.assertGreaterEqual(sub["taxable_amount"], 0.0)
+                self.assertGreaterEqual(sub["tax_category_percent"], 0.0)
 
     def test_template_category_does_not_absorb_a_withholding_row(self):
         # The template says STANDARD_VAT; the negative row's wording is the
@@ -204,7 +260,7 @@ class TaxTotalTest(unittest.TestCase):
 
         self.assertEqual(set(by_category), {"STANDARD_VAT", "WITHHOLDING_TAX"})
         self.assertAlmostEqual(by_category["STANDARD_VAT"]["tax_amount"], 9166.21, places=2)
-        self.assertAlmostEqual(by_category["WITHHOLDING_TAX"]["tax_amount"], -9166.21, places=2)
+        self.assertAlmostEqual(by_category["WITHHOLDING_TAX"]["tax_amount"], 9166.21, places=2)
 
     def test_ordinary_ngn_invoice_reconciles(self):
         self.template_category = "STANDARD_VAT"
@@ -362,7 +418,7 @@ class TaxTotalTest(unittest.TestCase):
         with self.assertRaises(TaxValidationError) as ctx:
             builder._build_tax_total(inv)
 
-        self.assertIn("increases the invoice total", str(ctx.exception))
+        self.assertIn("does not reduce the invoice total", str(ctx.exception))
 
     def test_tax_inclusive_row_is_rejected(self):
         row = make_tax(
